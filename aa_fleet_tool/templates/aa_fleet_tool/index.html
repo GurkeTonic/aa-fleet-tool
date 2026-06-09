@@ -1,0 +1,2044 @@
+{% extends "allianceauth/base-bs5.html" %}
+{% load i18n %}
+
+{% block extra_css %}
+{% include "bundles/datatables-2-css-bs5.html" %}
+{% endblock %}
+
+{% block page_title %}Fleet Tool{% endblock %}
+
+{% block header_nav_brand %}Fleet Tool{% endblock %}
+
+{% block header_nav_collapse_left %}
+<li class="nav-item">
+  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-fleets" type="button" id="tab-btn-fleets">
+    Active Fleets
+    {% if fleet_summary %}<span class="badge bg-success ms-1">{{ fleet_summary|length }}</span>{% endif %}
+  </button>
+</li>
+<li class="nav-item">
+  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-commanders" type="button">
+    Fleet Commanders <span class="badge bg-secondary ms-1">{{ all_fcs|length }}</span>
+  </button>
+</li>
+<li class="nav-item">
+  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-doctrines" type="button">
+    Doctrines
+  </button>
+</li>
+<li class="nav-item">
+  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-layouts" type="button">
+    Fleet Layouts <span class="badge bg-secondary ms-1">{{ layouts|length }}</span>
+  </button>
+</li>
+<li class="nav-item">
+  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-motd" type="button">
+    MOTD Library <span class="badge bg-secondary ms-1">{{ motd_templates|length }}</span>
+  </button>
+</li>
+{% endblock %}
+
+{% block header_nav_collapse_right %}
+<li class="nav-item">
+  <a href="{% url 'aa_fleet_tool:add_fc' %}" class="btn btn-primary btn-sm">
+    <i class="fas fa-plus"></i> Add FC
+  </a>
+</li>
+<li class="nav-item ms-1">
+  <button class="btn btn-secondary btn-sm" id="btn-sync">
+    <i class="fas fa-sync"></i> Sync
+  </button>
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  {% if messages %}
+  <div class="mt-2">
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="tab-content mt-3" id="fleetTabContent">
+
+    <!-- ── Active Fleets ──────────────────────────────────────────────── -->
+    <div class="tab-pane fade show active" id="tab-fleets">
+      {% if not fleet_summary %}
+      <div class="alert alert-info">
+        No active fleets. Register an FC with <strong>+ Add FC</strong>
+        and start a fleet in game.
+      </div>
+      {% else %}
+
+      <div class="row g-0">
+        <!-- Left: fleet list -->
+        <div class="col-auto border-end pe-3 me-3" style="min-width:220px;max-width:260px">
+          <strong class="d-block mb-2">Fleets</strong>
+          {% for item in fleet_summary %}
+          <a href="?fleet={{ item.fleet.pk }}{% if selected_doctrine_pk %}&doctrine={{ selected_doctrine_pk }}{% endif %}{% if selected_fleet_type %}&fleet_type={{ selected_fleet_type }}{% endif %}"
+             class="d-block px-2 py-2 mb-1 rounded text-decoration-none border
+                    {% if selected_fleet.pk == item.fleet.pk %}bg-primary text-white border-primary{% else %}text-body border-transparent{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-bold">{{ item.fleet.fc.character.character_name }}</span>
+              <span class="badge {% if selected_fleet.pk == item.fleet.pk %}bg-light text-dark{% else %}bg-secondary{% endif %}">
+                {{ item.member_count }}
+              </span>
+            </div>
+            <small class="{% if selected_fleet.pk == item.fleet.pk %}text-white-50{% else %}text-muted{% endif %}">
+              Fleet {{ item.fleet.fleet_id|truncatechars:12 }}
+            </small>
+          </a>
+          {% endfor %}
+        </div>
+
+        <!-- Right: fleet detail -->
+        <div class="col" id="fleet-detail">
+          {% if selected_fleet %}
+
+          <!-- ══ Status + FC actions ══ -->
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <!-- Fleet name (editable inline for FC) -->
+            <div class="d-flex align-items-center gap-1">
+              <span id="fleet-name-display" class="fw-bold fs-5"
+                    style="{% if not selected_fleet.name %}color:var(--bs-secondary){% endif %}">
+                {{ selected_fleet.name|default:"(no name)" }}
+              </span>
+              {% if is_my_fleet %}
+              <button class="btn btn-xs btn-link text-muted p-0 ms-1" id="btn-edit-fleet-name"
+                      title="Edit fleet name">
+                <i class="fas fa-pen" style="font-size:11px"></i>
+              </button>
+              {% endif %}
+            </div>
+            <div class="vr d-none d-sm-block" style="height:22px"></div>
+            <span class="badge bg-dark py-2 px-3">
+              <i class="fas fa-users me-1"></i>
+              <span id="member-count-badge">{{ selected_fleet_members|length }}</span> Member
+            </span>
+            <span id="freemove-badge" class="badge py-2 px-2 {% if selected_fleet.is_free_move %}bg-success{% else %}bg-secondary{% endif %}">
+              <i class="fas fa-{% if selected_fleet.is_free_move %}lock-open{% else %}lock{% endif %} me-1"></i>
+              Free Move {% if selected_fleet.is_free_move %}ON{% else %}OFF{% endif %}
+            </span>
+            {% if selected_fleet.last_updated %}
+            <small class="text-muted">
+              Sync: <span id="sync-time">{{ selected_fleet.last_updated|date:"H:i:s" }}</span> UTC
+              <span id="live-indicator" class="text-success ms-1"><i class="fas fa-circle" style="font-size:8px"></i></span>
+            </small>
+            {% endif %}
+            {% if is_my_fleet %}
+            <div class="ms-auto d-flex flex-wrap gap-2">
+              <button class="btn btn-sm btn-outline-primary" id="btn-open-apply-layout"
+                      data-fleet="{{ selected_fleet.pk }}">
+                <i class="fas fa-layer-group me-1"></i>Apply Layout
+              </button>
+              <button class="btn btn-sm btn-outline-info" id="btn-open-load-motd"
+                      data-fleet="{{ selected_fleet.pk }}">
+                <i class="fas fa-book-open me-1"></i>Load MOTD
+              </button>
+              {% if config.enable_fat_link %}
+              <button class="btn btn-sm btn-outline-warning" id="btn-open-fat-link"
+                      data-fleet="{{ selected_fleet.pk }}">
+                <i class="fas fa-crosshairs me-1"></i>FAT Link
+              </button>
+              {% endif %}
+              {% if config.enable_srp_link %}
+              <button class="btn btn-sm btn-outline-danger" id="btn-open-srp-link"
+                      data-fleet="{{ selected_fleet.pk }}">
+                <i class="fas fa-shield-alt me-1"></i>SRP Link
+              </button>
+              {% endif %}
+              <button class="btn btn-sm btn-outline-secondary" id="btn-toggle-freemove"
+                      data-fleet="{{ selected_fleet.pk }}"
+                      data-value="{% if selected_fleet.is_free_move %}false{% else %}true{% endif %}">
+                <i class="fas fa-{% if selected_fleet.is_free_move %}lock{% else %}lock-open{% endif %} me-1"></i>
+                Free Move {% if selected_fleet.is_free_move %}OFF{% else %}ON{% endif %}
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
+                      data-bs-target="#motd-editor">
+                <i class="fas fa-pencil-alt me-1"></i>MOTD
+              </button>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- MOTD display (tags stripped for readability) -->
+          <div class="alert alert-secondary py-2 mb-2 small d-flex align-items-start gap-2{% if not selected_fleet.motd %} d-none{% endif %}" id="motd-display-block">
+            <i class="fas fa-comment-alt text-muted flex-shrink-0 mt-1"></i>
+            <span id="motd-display-text" style="white-space:pre-wrap">{{ selected_fleet.motd|striptags }}</span>
+          </div>
+
+          <!-- MOTD inline editor (collapsible) -->
+          {% if is_my_fleet %}
+          <div class="collapse mb-3" id="motd-editor">
+            <div class="card card-body py-2">
+              <label class="form-label small fw-bold mb-1">Edit MOTD directly:</label>
+              <div class="input-group">
+                <textarea class="form-control form-control-sm" id="motd-text" rows="3" style="font-family:monospace">{{ selected_fleet.motd }}</textarea>
+                <button class="btn btn-primary" id="btn-save-motd" data-fleet="{{ selected_fleet.pk }}">
+                  <i class="fas fa-save me-1"></i>Set
+                </button>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- ══ Fleet Composition Card ══ -->
+          <div class="card mb-3">
+            <div class="card-body">
+
+              <!-- Fleet roles (always visible) -->
+              <div class="d-flex flex-wrap align-items-end gap-4 mb-3">
+                <div class="text-center">
+                  <div class="fw-bold lh-1 mb-1" style="font-size:2rem" id="role-count-fleet_commander">{{ role_counts.fleet_commander }}</div>
+                  <span class="badge bg-danger">FC</span>
+                </div>
+                <div class="text-center">
+                  <div class="fw-bold lh-1 mb-1" style="font-size:2rem" id="role-count-wing_commander">{{ role_counts.wing_commander }}</div>
+                  <span class="badge bg-warning text-dark">WC</span>
+                </div>
+                <div class="text-center">
+                  <div class="fw-bold lh-1 mb-1" style="font-size:2rem" id="role-count-squad_commander">{{ role_counts.squad_commander }}</div>
+                  <span class="badge bg-info text-dark">SC</span>
+                </div>
+                <div class="text-center">
+                  <div class="fw-bold lh-1 mb-1" style="font-size:2rem" id="role-count-squad_member">{{ role_counts.squad_member }}</div>
+                  <span class="badge bg-secondary">Member</span>
+                </div>
+                <div class="vr d-none d-sm-block mx-1" style="height:52px"></div>
+                <div class="text-center">
+                  <div class="fw-bold lh-1 mb-1 text-primary" style="font-size:2rem" id="total-count">{{ selected_fleet_members|length }}</div>
+                  <span class="badge bg-primary">Total</span>
+                </div>
+              </div>
+
+              <!-- Doctrine + Fleet Type selectors -->
+              <div class="d-flex flex-wrap align-items-center gap-3 pt-2 border-top">
+                <label class="form-label mb-0 fw-bold small text-nowrap">Doctrine:</label>
+                <select class="form-select form-select-sm" id="doctrine-select" style="max-width:260px">
+                  <option value="">— no check —</option>
+                  {% if doctrines %}
+                  <optgroup label="Local Doctrines">
+                    {% for doc in doctrines %}
+                    <option value="{{ doc.pk }}" {% if selected_doctrine_pk == doc.pk|stringformat:"s" %}selected{% endif %}>
+                      {{ doc.name }} ({{ doc.ships.count }})
+                    </option>
+                    {% endfor %}
+                  </optgroup>
+                  {% endif %}
+                  {% if fittings_doctrines %}
+                  <optgroup label="Fittings Doctrines">
+                    {% for doc in fittings_doctrines %}
+                    <option value="fittings-{{ doc.pk }}" {% if selected_fittings_doctrine_pk == doc.pk %}selected{% endif %}>
+                      {{ doc.name }} ({{ doc.fittings.count }} fits)
+                    </option>
+                    {% endfor %}
+                  </optgroup>
+                  {% endif %}
+                </select>
+                <span class="badge bg-success on-doctrine-badge{% if not selected_doctrine_pk %} d-none{% endif %}">
+                  <i class="fas fa-check me-1"></i>{{ on_doctrine_count }} / {{ selected_fleet_members|length }} on-doctrine
+                </span>
+                {% if config.enable_fat_link or config.enable_srp_link %}
+                <div class="vr d-none d-sm-block" style="height:28px"></div>
+                <label class="form-label mb-0 fw-bold small text-nowrap">Fleet Type:</label>
+                <select class="form-select form-select-sm" id="fleet-type-select" style="max-width:200px">
+                  <option value="">— select type —</option>
+                  {% for ft in fleet_types_combined %}
+                  <option value="{{ ft }}"{% if selected_fleet_type == ft %} selected{% endif %}>{{ ft }}</option>
+                  {% endfor %}
+                </select>
+                {% endif %}
+              </div>
+
+              <!-- Ship type breakdown (only when doctrine selected) -->
+              <div id="fleet-composition" class="mt-3{% if not selected_doctrine_pk %} d-none{% endif %}" style="max-width:480px">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="badge bg-danger" style="min-width:72px">DPS</span>
+                  <div class="progress flex-grow-1" style="height:18px">
+                    <div class="progress-bar bg-danger" id="comp-dps-bar" style="width:{{ comp.dps.pct }}%"></div>
+                  </div>
+                  <strong id="comp-dps-count" style="min-width:22px;text-align:right">{{ comp.dps.count }}</strong>
+                  <small class="text-muted" style="min-width:42px">(<span id="comp-dps-pct">{{ comp.dps.pct }}</span>%)</small>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="badge bg-success" style="min-width:72px">Logi</span>
+                  <div class="progress flex-grow-1" style="height:18px">
+                    <div class="progress-bar bg-success" id="comp-logi-bar" style="width:{{ comp.logi.pct }}%"></div>
+                  </div>
+                  <strong id="comp-logi-count" style="min-width:22px;text-align:right">{{ comp.logi.count }}</strong>
+                  <small class="text-muted" style="min-width:42px">(<span id="comp-logi-pct">{{ comp.logi.pct }}</span>%)</small>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="badge bg-info text-dark" style="min-width:72px">Booster</span>
+                  <div class="progress flex-grow-1" style="height:18px">
+                    <div class="progress-bar bg-info" id="comp-booster-bar" style="width:{{ comp.booster.pct }}%"></div>
+                  </div>
+                  <strong id="comp-booster-count" style="min-width:22px;text-align:right">{{ comp.booster.count }}</strong>
+                  <small class="text-muted" style="min-width:42px">(<span id="comp-booster-pct">{{ comp.booster.pct }}</span>%)</small>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="badge bg-warning text-dark" style="min-width:72px">EWAR</span>
+                  <div class="progress flex-grow-1" style="height:18px">
+                    <div class="progress-bar bg-warning" id="comp-ewar-bar" style="width:{{ comp.ewar.pct }}%"></div>
+                  </div>
+                  <strong id="comp-ewar-count" style="min-width:22px;text-align:right">{{ comp.ewar.count }}</strong>
+                  <small class="text-muted" style="min-width:42px">(<span id="comp-ewar-pct">{{ comp.ewar.pct }}</span>%)</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge bg-secondary" style="min-width:72px">Other</span>
+                  <div class="progress flex-grow-1" style="height:18px">
+                    <div class="progress-bar bg-secondary" id="comp-other-bar" style="width:{{ comp.other.pct }}%"></div>
+                  </div>
+                  <strong id="comp-other-count" style="min-width:22px;text-align:right">{{ comp.other.count }}</strong>
+                  <small class="text-muted" style="min-width:42px">(<span id="comp-other-pct">{{ comp.other.pct }}</span>%)</small>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ══ Wing/Squad Structure (collapsible) ══ -->
+          {% if wings_data %}
+          <div class="mb-3">
+            <button class="btn btn-sm btn-outline-secondary mb-2" data-bs-toggle="collapse" data-bs-target="#wing-structure">
+              <i class="fas fa-sitemap me-1"></i>Wing/Squad Structure
+            </button>
+            <div class="collapse" id="wing-structure">
+              {% for wd in wings_data %}
+              <div class="border rounded p-2 mb-2">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <strong>
+                    <i class="fas fa-layer-group text-warning me-1"></i>
+                    {{ wd.wing.name|default:"Wing (no name)" }}
+                  </strong>
+                  <small class="text-muted">{{ wd.members|length }} Member</small>
+                  {% if is_my_fleet %}
+                  <button class="btn btn-xs btn-outline-secondary py-0 px-1 btn-rename-wing"
+                          data-url="{% url 'aa_fleet_tool:rename_wing' selected_fleet.pk wd.wing.wing_id %}"
+                          data-name="{{ wd.wing.name }}">
+                    <i class="fas fa-pen" style="font-size:10px"></i>
+                  </button>
+                  <button class="btn btn-xs btn-outline-success py-0 px-1 btn-create-squad"
+                          data-url="{% url 'aa_fleet_tool:create_squad' selected_fleet.pk wd.wing.wing_id %}">
+                    <i class="fas fa-plus" style="font-size:10px"></i> Squad
+                  </button>
+                  {% endif %}
+                </div>
+                {% for sq in wd.squads %}
+                <div class="ms-3 ps-2 border-start mb-1">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-users text-info me-1" style="font-size:11px"></i>
+                    <small class="fw-bold">{{ sq.squad.name|default:"Squad (no name)" }}</small>
+                    <small class="text-muted">{{ sq.members|length }} Member</small>
+                    {% if is_my_fleet %}
+                    <button class="btn btn-xs btn-outline-secondary py-0 px-1 btn-rename-squad"
+                            data-url="{% url 'aa_fleet_tool:rename_squad' selected_fleet.pk sq.squad.squad_id %}"
+                            data-wing="{{ wd.wing.wing_id }}" data-name="{{ sq.squad.name }}">
+                      <i class="fas fa-pen" style="font-size:10px"></i>
+                    </button>
+                    <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-squad"
+                            data-url="{% url 'aa_fleet_tool:delete_squad' selected_fleet.pk sq.squad.squad_id %}">
+                      <i class="fas fa-times" style="font-size:10px"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+                {% if is_my_fleet %}
+                <div class="ms-3 mt-1">
+                  <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-wing"
+                          data-url="{% url 'aa_fleet_tool:delete_wing' selected_fleet.pk wd.wing.wing_id %}">
+                    <i class="fas fa-trash" style="font-size:10px"></i> Delete Wing
+                  </button>
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% if is_my_fleet %}
+              <button class="btn btn-sm btn-outline-primary btn-create-wing" data-fleet="{{ selected_fleet.pk }}">
+                <i class="fas fa-plus"></i> Create Wing
+              </button>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- ══ Member Table ══ -->
+          <table id="tbl-members" class="table table-sm table-striped table-hover" style="width:100%">
+            <thead>
+              <tr>
+                <th>Character</th>
+                <th>Ship</th>
+                <th>System</th>
+                <th>Docked</th>
+                <th>Role</th>
+                <th>Wing / Squad</th>
+                <th>Warp</th>
+                <th>Doctrine</th>
+                <th>Join (UTC)</th>
+                {% if is_my_fleet %}<th></th>{% endif %}
+              </tr>
+            </thead>
+            <tbody id="member-tbody">
+              {% for m in selected_fleet_members %}
+              <tr>
+                <td>{{ m.character_name }}</td>
+                <td>{{ m.ship_name }}</td>
+                <td>{{ m.system_name }}</td>
+                <td>{% if m.station_id %}<span class="badge bg-secondary" title="Station ID: {{ m.station_id }}"><i class="fas fa-anchor me-1"></i>Docked</span>{% endif %}</td>
+                <td><span class="badge bg-{{ m.role_badge_color }}">{{ m.role_short }}</span></td>
+                <td><small class="text-muted">{% for wd in wings_data %}{% if wd.wing.wing_id == m.wing_id %}{{ wd.wing.name }}{% for sq in wd.squads %}{% if sq.squad.squad_id == m.squad_id %} / {{ sq.squad.name }}{% endif %}{% endfor %}{% endif %}{% endfor %}</small></td>
+                <td>{% if m.takes_fleet_warp %}<span class="text-muted small"><i class="fas fa-check"></i></span>{% else %}<span class="badge bg-warning text-dark" title="No fleet warp"><i class="fas fa-ban"></i></span>{% endif %}</td>
+                <td>{% if selected_doctrine_pk %}{% if m.character_id in on_doctrine_chars %}<span class="badge bg-success"><i class="fas fa-check"></i></span>{% else %}<span class="badge bg-danger"><i class="fas fa-times"></i></span>{% endif %}{% endif %}</td>
+                <td><small class="text-muted">{% if m.join_time %}{{ m.join_time|date:"H:i" }}{% endif %}</small></td>
+                {% if is_my_fleet %}<td class="text-end text-nowrap">
+                  <button class="btn btn-sm btn-outline-warning btn-move-member me-1" data-fleet="{{ selected_fleet.pk }}" data-char="{{ m.character_id }}" data-charname="{{ m.character_name }}"><i class="fas fa-arrows-alt"></i></button>
+                  <button class="btn btn-sm btn-outline-danger btn-kick-member" data-fleet="{{ selected_fleet.pk }}" data-char="{{ m.character_id }}" data-charname="{{ m.character_name }}"><i class="fas fa-times"></i></button>
+                </td>{% endif %}
+              </tr>
+              {% empty %}
+              <tr><td colspan="{% if is_my_fleet %}10{% else %}9{% endif %}" class="text-center text-muted">No members</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          {% if is_my_fleet %}
+          <button class="btn btn-sm btn-outline-primary mt-2" id="btn-invite"
+                  data-fleet="{{ selected_fleet.pk }}">
+            <i class="fas fa-envelope me-1"></i>Invite Member
+          </button>
+          {% endif %}
+
+          {% else %}
+          <div class="text-muted mt-2">Select a fleet from the list.</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Fleet Commanders ───────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-commanders">
+      <table id="tbl-commanders" class="table table-sm table-striped" style="width:100%">
+        <thead>
+          <tr>
+            <th>Character</th>
+            <th>User</th>
+            <th>Status</th>
+            <th>Fleet Size</th>
+            <th>Last Sync</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fc in all_fcs %}
+          <tr>
+            <td>{{ fc.character.character_name }}</td>
+            <td>{{ fc.user.username }}</td>
+            <td>
+              {% if fc.active_fleet %}
+              <span class="badge bg-success"><i class="fas fa-circle me-1"></i>In Fleet</span>
+              {% else %}
+              <span class="badge bg-secondary">Offline</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if fc.active_fleet %}{{ fc.active_fleet.member_count }}{% else %}—{% endif %}
+            </td>
+            <td>
+              {% if fc.active_fleet and fc.active_fleet.last_updated %}
+              {{ fc.active_fleet.last_updated|date:"d.m.Y H:i:s" }} UTC
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if fc.user == request.user %}
+              <button class="btn btn-sm btn-outline-danger btn-remove-fc" data-pk="{{ fc.pk }}">
+                <i class="fas fa-trash"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted">No FC registered</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <a href="{% url 'aa_fleet_tool:add_fc' %}" class="btn btn-primary btn-sm mt-2">
+        <i class="fas fa-plus"></i> Add FC
+      </a>
+    </div>
+
+    <!-- ── Fleet Layouts ─────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-layouts">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Fleet Layouts</strong>
+            {% if perms.aa_fleet_tool.manage_doctrine %}
+            <button class="btn btn-sm btn-outline-primary" id="btn-new-layout">
+              <i class="fas fa-plus"></i> New Layout
+            </button>
+            {% endif %}
+          </div>
+
+          {% for layout in layouts %}
+          <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+              <strong>{{ layout.name }}</strong>
+              <div class="d-flex gap-1">
+                {% if perms.aa_fleet_tool.manage_doctrine %}
+                <button class="btn btn-xs btn-outline-primary py-0 px-1 btn-add-layout-wing"
+                        data-pk="{{ layout.pk }}">
+                  <i class="fas fa-plus"></i> Wing
+                </button>
+                <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-layout"
+                        data-pk="{{ layout.pk }}" data-name="{{ layout.name }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+            <div class="card-body py-2">
+              {% if layout.description %}
+              <small class="text-muted d-block mb-2">{{ layout.description }}</small>
+              {% endif %}
+              {% for wing in layout.wings.all %}
+              <div class="mb-2">
+                <div class="d-flex align-items-center gap-1 mb-1">
+                  <i class="fas fa-layer-group text-warning me-1"></i>
+                  <strong class="small">{{ wing.name }}</strong>
+                  {% if perms.aa_fleet_tool.manage_doctrine %}
+                  <button class="btn btn-xs btn-outline-secondary py-0 px-1 btn-rename-layout-wing"
+                          data-pk="{{ wing.pk }}" data-name="{{ wing.name }}">
+                    <i class="fas fa-pen" style="font-size:10px"></i>
+                  </button>
+                  <button class="btn btn-xs btn-outline-success py-0 px-1 btn-add-layout-squad"
+                          data-pk="{{ wing.pk }}">
+                    <i class="fas fa-plus" style="font-size:10px"></i>
+                  </button>
+                  <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-layout-wing"
+                          data-pk="{{ wing.pk }}">
+                    <i class="fas fa-trash" style="font-size:10px"></i>
+                  </button>
+                  {% endif %}
+                </div>
+                {% for squad in wing.squads.all %}
+                <div class="ms-3 d-flex align-items-center gap-1 mb-1">
+                  <i class="fas fa-users text-info me-1" style="font-size:11px"></i>
+                  <small>{{ squad.name }}</small>
+                  {% if perms.aa_fleet_tool.manage_doctrine %}
+                  <button class="btn btn-xs btn-outline-secondary py-0 px-1 btn-rename-layout-squad"
+                          data-pk="{{ squad.pk }}" data-name="{{ squad.name }}">
+                    <i class="fas fa-pen" style="font-size:10px"></i>
+                  </button>
+                  <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-layout-squad"
+                          data-pk="{{ squad.pk }}">
+                    <i class="fas fa-times" style="font-size:10px"></i>
+                  </button>
+                  {% endif %}
+                </div>
+                {% empty %}
+                <small class="ms-3 text-muted">No squads</small>
+                {% endfor %}
+              </div>
+              {% empty %}
+              <small class="text-muted">No wings defined yet.</small>
+              {% endfor %}
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-muted">No layouts defined yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MOTD Library ───────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-motd">
+      <div class="row">
+        <div class="col-md-7">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <strong>MOTD Library</strong>
+            {% if perms.aa_fleet_tool.manage_doctrine %}
+            <button class="btn btn-sm btn-outline-primary" id="btn-new-motd-tpl">
+              <i class="fas fa-plus me-1"></i>New Template
+            </button>
+            {% endif %}
+          </div>
+
+          {% for tpl in motd_templates %}
+          <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+              <strong>{{ tpl.name }}</strong>
+              {% if perms.aa_fleet_tool.manage_doctrine %}
+              <div class="d-flex gap-1">
+                <button class="btn btn-xs btn-outline-secondary py-0 px-1 btn-edit-motd-tpl"
+                        data-pk="{{ tpl.pk }}">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-motd-tpl"
+                        data-pk="{{ tpl.pk }}" data-name="{{ tpl.name }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              {% endif %}
+            </div>
+            <div class="card-body py-2">
+              <pre class="small text-muted mb-0" style="white-space:pre-wrap;font-family:inherit">{{ tpl.text|striptags|truncatechars:300 }}</pre>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>No MOTD templates defined yet.
+            {% if perms.aa_fleet_tool.manage_doctrine %}
+            Create the first template using the button above.
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Doctrines ──────────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-doctrines">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Doctrines</strong>
+            {% if perms.aa_fleet_tool.manage_doctrine %}
+            <button class="btn btn-sm btn-outline-primary" id="btn-new-doctrine">
+              <i class="fas fa-plus"></i>
+            </button>
+            {% endif %}
+          </div>
+          <div class="list-group" id="doctrine-list">
+            {% for doc in doctrines %}
+            <a href="#doctrine-{{ doc.pk }}" class="list-group-item list-group-item-action" data-bs-toggle="collapse">
+              <div class="d-flex justify-content-between">
+                <span>{{ doc.name }}</span>
+                <span class="badge bg-secondary">{{ doc.ships.count }}</span>
+              </div>
+              {% if doc.description %}
+              <small class="text-muted">{{ doc.description }}</small>
+              {% endif %}
+            </a>
+            <div class="collapse" id="doctrine-{{ doc.pk }}">
+              <div class="border border-top-0 rounded-bottom p-2">
+                <table class="table table-sm mb-2">
+                  <thead><tr><th>Ship</th><th>Role</th>{% if perms.aa_fleet_tool.manage_doctrine %}<th></th>{% endif %}</tr></thead>
+                  <tbody>
+                    {% for ship in doc.ships.all %}
+                    <tr>
+                      <td>{{ ship.ship_name }}</td>
+                      <td><span class="badge bg-secondary">{{ ship.get_role_hint_display }}</span></td>
+                      {% if perms.aa_fleet_tool.manage_doctrine %}
+                      <td>
+                        <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-remove-doctrine-ship"
+                                data-pk="{{ ship.pk }}">
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </td>
+                      {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-muted">No ships</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% if perms.aa_fleet_tool.manage_doctrine %}
+                <div class="d-flex gap-1">
+                  <button class="btn btn-sm btn-outline-primary btn-add-doctrine-ship" data-pk="{{ doc.pk }}">
+                    <i class="fas fa-plus"></i> Add Ship
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger btn-delete-doctrine" data-pk="{{ doc.pk }}">
+                    <i class="fas fa-trash"></i> Delete Doctrine
+                  </button>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No doctrine defined.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+</div>
+
+<!-- ══════════════════ MODALS ══════════════════ -->
+
+<!-- Modal: Rename Wing -->
+<div class="modal fade" id="modal-rename-wing" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Rename Wing</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="text" class="form-control" id="rename-wing-input" placeholder="Wing name">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-rename-wing">Save</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Rename Squad -->
+<div class="modal fade" id="modal-rename-squad" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Rename Squad</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="text" class="form-control" id="rename-squad-input" placeholder="Squad name">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-rename-squad">Save</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Move Member -->
+<div class="modal fade" id="modal-move-member" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Move Member</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <p class="mb-2">Character: <strong id="move-char-name"></strong></p>
+      <div class="mb-2">
+        <label class="form-label">Role</label>
+        <select class="form-select" id="move-role">
+          <option value="squad_member">Squad Member</option>
+          <option value="squad_commander">Squad Commander</option>
+          <option value="wing_commander">Wing Commander</option>
+          <option value="fleet_commander">Fleet Commander</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Wing</label>
+        <select class="form-select" id="move-wing">
+          <option value="">— no wing —</option>
+          {% if selected_fleet %}{% for wd in wings_data %}
+          <option value="{{ wd.wing.wing_id }}">{{ wd.wing.name|default:"Wing" }}</option>
+          {% endfor %}{% endif %}
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Squad</label>
+        <select class="form-select" id="move-squad">
+          <option value="">— no squad —</option>
+          {% if selected_fleet %}{% for wd in wings_data %}{% for sq in wd.squads %}
+          <option value="{{ sq.squad.squad_id }}" data-wing="{{ wd.wing.wing_id }}">{{ sq.squad.name|default:"Squad" }} ({{ wd.wing.name|default:"Wing" }})</option>
+          {% endfor %}{% endfor %}{% endif %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-warning" id="btn-submit-move">Move</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Invite Member -->
+<div class="modal fade" id="modal-invite" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Invite Member</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-2">
+        <label class="form-label">Character ID</label>
+        <input type="number" class="form-control" id="invite-char-id" placeholder="EVE Character ID">
+        <small class="text-muted">Note: Character must not have a CSPA charge set.</small>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Role</label>
+        <select class="form-select" id="invite-role">
+          <option value="squad_member">Squad Member</option>
+          <option value="squad_commander">Squad Commander</option>
+          <option value="wing_commander">Wing Commander</option>
+          <option value="fleet_commander">Fleet Commander</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-invite">Invite</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: New Doctrine -->
+<div class="modal fade" id="modal-new-doctrine" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">New Doctrine</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="text" class="form-control mb-2" id="new-doctrine-name" placeholder="Name">
+      <input type="text" class="form-control" id="new-doctrine-desc" placeholder="Description (optional)">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-new-doctrine">Create</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Add Doctrine Ship -->
+<div class="modal fade" id="modal-add-doctrine-ship" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Add Ship to Doctrine</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div id="add-ship-error" class="alert alert-danger py-1 small d-none"></div>
+      <div class="mb-2 position-relative">
+        <label class="form-label">Ship <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="doctrine-ship-search"
+               placeholder="Start typing to search… (e.g. Ferox)" autocomplete="off">
+        <div id="ship-search-results"
+             class="list-group position-absolute w-100 shadow-sm"
+             style="z-index:1070;top:100%;max-height:200px;overflow-y:auto;display:none"></div>
+        <input type="hidden" id="doctrine-ship-type-id">
+        <input type="hidden" id="doctrine-ship-name">
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Role</label>
+        <select class="form-select" id="doctrine-ship-role">
+          <option value="any">Any</option>
+          <option value="dps">DPS</option>
+          <option value="logi">Logi</option>
+          <option value="booster">Booster</option>
+          <option value="fc">FC</option>
+          <option value="ewar">EWAR</option>
+          <option value="hauler">Hauler</option>
+          <option value="scout">Scout</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-add-ship">Add</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: New Fleet Layout -->
+<div class="modal fade" id="modal-new-layout" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">New Fleet Layout</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" class="form-control" id="new-layout-name" placeholder="e.g. HAC Fleet">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Description (optional)</label>
+        <textarea class="form-control" id="new-layout-desc" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-new-layout">Create</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Add Layout Wing -->
+<div class="modal fade" id="modal-add-layout-wing" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Add Wing</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">Wing name</label>
+        <input type="text" class="form-control" id="add-layout-wing-name" placeholder="e.g. Alpha Wing">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-add-layout-wing">Add</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Rename Layout Wing -->
+<div class="modal fade" id="modal-rename-layout-wing" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Rename Wing</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">New name</label>
+        <input type="text" class="form-control" id="rename-layout-wing-name">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-rename-layout-wing">Save</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Add Layout Squad -->
+<div class="modal fade" id="modal-add-layout-squad" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Add Squad</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">Squad name</label>
+        <input type="text" class="form-control" id="add-layout-squad-name" placeholder="e.g. Bravo Squad">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-add-layout-squad">Add</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Rename Layout Squad -->
+<div class="modal fade" id="modal-rename-layout-squad" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Rename Squad</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">New name</label>
+        <input type="text" class="form-control" id="rename-layout-squad-name">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-rename-layout-squad">Save</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: MOTD Load (2-step: select template → edit → set) -->
+<div class="modal fade" id="modal-load-motd" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title"><i class="fas fa-book-open me-2"></i>Load MOTD</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-bold small">Select template:</label>
+          {% if motd_templates %}
+          <div class="list-group" id="motd-tpl-list" style="max-height:300px;overflow-y:auto">
+            {% for tpl in motd_templates %}
+            <button type="button"
+                    class="list-group-item list-group-item-action py-2 motd-tpl-btn"
+                    data-pk="{{ tpl.pk }}">
+              <div class="fw-bold small">{{ tpl.name }}</div>
+              <small class="text-muted">{{ tpl.text|striptags|truncatechars:80 }}</small>
+            </button>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted small">
+            No templates yet. Create some in the
+            <strong>MOTD Library</strong> tab.
+          </p>
+          {% endif %}
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-bold small">Edit MOTD
+            <small class="text-muted fw-normal">(changes only affect this instance)</small>
+          </label>
+          <textarea class="form-control" id="motd-load-text" rows="10"
+                    placeholder="Select a template or type directly…" style="font-family:monospace"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-load-motd">
+        <i class="fas fa-paper-plane me-1"></i>Set
+      </button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: New MOTD Template -->
+<div class="modal fade" id="modal-new-motd-tpl" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">New MOTD Template</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">Name <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="new-motd-tpl-name" placeholder="e.g. Armor HAC Form-Up">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Text</label>
+        <textarea class="form-control" id="new-motd-tpl-text" rows="10"
+                  placeholder="MOTD text…" style="font-family:monospace"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-new-motd-tpl">Create</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Edit MOTD Template -->
+<div class="modal fade" id="modal-edit-motd-tpl" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Edit MOTD Template</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-motd-tpl-pk">
+      <div class="mb-3">
+        <label class="form-label">Name <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="edit-motd-tpl-name">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Text</label>
+        <textarea class="form-control" id="edit-motd-tpl-text" rows="10"
+                  style="font-family:monospace"></textarea>
+        <small class="text-muted">EVE XML format — will be set as MOTD without changes.</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-edit-motd-tpl">Save</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Apply Layout -->
+<div class="modal fade" id="modal-apply-layout" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Apply Layout</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <p class="text-muted small">The selected layout will be applied to your active fleet. Existing wings/squads will be renamed, missing ones created.</p>
+      <div class="mb-3">
+        <label class="form-label">Select layout</label>
+        <select class="form-select" id="apply-layout-select">
+          <option value="">— Select layout —</option>
+          {% for layout in layouts %}
+          <option value="{{ layout.pk }}"
+                  data-url="{% url 'aa_fleet_tool:apply_layout' 0 layout.pk %}">
+            {{ layout.name }}{% if layout.description %} – {{ layout.description }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-warning" id="btn-submit-apply-layout">Apply</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: FAT Link -->
+{% if config.enable_fat_link %}
+<div class="modal fade" id="modal-fat-link" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title"><i class="fas fa-crosshairs me-2 text-warning"></i>Create FAT Link</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div id="fat-link-result" class="alert alert-success d-none">
+        <strong id="fat-link-result-title">FAT Link created!</strong><br>
+        <span id="fat-link-result-msg">Share this link in fleet chat:</span><br>
+        <a id="fat-link-url" href="#" target="_blank" class="text-break"></a>
+        <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-copy-fat-link">
+          <i class="fas fa-copy"></i> Copy
+        </button>
+      </div>
+      <div id="fat-link-form-body">
+        <!-- Link type -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Link Type</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="fat-link-type" id="fat-type-clickable" value="clickable" checked>
+              <label class="form-check-label" for="fat-type-clickable">
+                <i class="fas fa-mouse-pointer me-1 text-warning"></i>Clickable
+                <small class="d-block text-muted">Members click the link to register</small>
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="fat-link-type" id="fat-type-esi" value="esi">
+              <label class="form-check-label" for="fat-type-esi">
+                <i class="fas fa-satellite-dish me-1 text-info"></i>ESI
+                <small class="d-block text-muted">Auto-registers current fleet members</small>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Fleet Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="fat-link-name" placeholder="e.g. HAC Roam" value="">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Fleet Type</label>
+          <input type="text" class="form-control-plaintext fw-bold ps-2 border rounded" id="fat-link-fleet-type-display" readonly>
+          <input type="hidden" id="fat-link-fleet-type-pk">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Doctrine</label>
+          <input type="text" class="form-control" id="fat-link-doctrine" placeholder="optional">
+        </div>
+        <div class="mb-3" id="fat-link-duration-row">
+          <label class="form-label">Duration (minutes) <small class="text-muted">— clickable links only</small></label>
+          <input type="number" class="form-control" id="fat-link-duration"
+                 value="{{ afat_default_duration }}" min="1" max="1440">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="fat-link-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-warning" id="btn-submit-fat-link">
+        <i class="fas fa-crosshairs me-1"></i>Create FAT Link
+      </button>
+    </div>
+  </div></div>
+</div>
+{% endif %}
+
+<!-- Modal: SRP Link -->
+{% if config.enable_srp_link %}
+<div class="modal fade" id="modal-srp-link" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title"><i class="fas fa-shield-alt me-2 text-danger"></i>Create SRP Link</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div id="srp-link-result" class="alert alert-success d-none">
+        <strong>SRP Link created!</strong><br>
+        Share this link with fleet members:<br>
+        <a id="srp-link-url" href="#" target="_blank" class="text-break"></a>
+        <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-copy-srp-link">
+          <i class="fas fa-copy"></i> Copy
+        </button>
+      </div>
+      <div id="srp-link-form-body">
+        <div class="mb-3">
+          <label class="form-label">SRP Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="srp-link-name"
+                 placeholder="e.g. HAC Roam SRP"
+                 value="">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Fleet Type</label>
+          <input type="text" class="form-control-plaintext fw-bold ps-2 border rounded" id="srp-link-fleet-type-display" readonly>
+          <input type="hidden" id="srp-link-fleet-type-pk">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Doctrine <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="srp-link-doctrine" placeholder="e.g. HAC Doctrine">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">AAR Link (optional)</label>
+          <input type="text" class="form-control" id="srp-link-aar" placeholder="https://…">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="srp-link-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-danger" id="btn-submit-srp-link">
+        <i class="fas fa-shield-alt me-1"></i>Create SRP Link
+      </button>
+    </div>
+  </div></div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_javascript %}
+{% include "bundles/datatables-2-js-bs5.html" %}
+{{ motd_tpl_data|json_script:"motd-tpl-data" }}
+{{ afat_fleet_types|json_script:"afat-fleet-types-data" }}
+{{ aasrp_fleet_types|json_script:"aasrp-fleet-types-data" }}
+<script>
+(function () {
+  "use strict";
+
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? "";
+  const currentUrl = new URL(window.location.href);
+  const fleetPk = currentUrl.searchParams.get("fleet");
+  const doctrinePk = currentUrl.searchParams.get("doctrine");
+
+  function post(url, data) {
+    const fd = new FormData();
+    fd.append("csrfmiddlewaretoken", csrfToken);
+    for (const [k, v] of Object.entries(data)) fd.append(k, v);
+    return fetch(url, { method: "POST", body: fd })
+      .then(r => r.json())
+      .catch(err => { console.error("POST failed:", url, err); return { ok: false, error: "Server error – see console." }; });
+  }
+
+  function reload() {
+    const ws = document.getElementById("wing-structure");
+    if (ws?.classList.contains("show")) sessionStorage.setItem("wing_open", "1");
+    window.location.reload();
+  }
+  function navTo(params) {
+    const u = new URL(window.location.href);
+    for (const [k, v] of Object.entries(params)) {
+      if (v) u.searchParams.set(k, v);
+      else u.searchParams.delete(k);
+    }
+    window.location.href = u.toString();
+  }
+
+  // DataTables init
+  document.addEventListener("DOMContentLoaded", function () {
+    if (sessionStorage.getItem("wing_open") === "1") {
+      sessionStorage.removeItem("wing_open");
+      const ws = document.getElementById("wing-structure");
+      if (ws) new bootstrap.Collapse(ws, { toggle: false }).show();
+    }
+
+    try {
+      if (document.getElementById("tbl-commanders")) {
+        $("#tbl-commanders").DataTable({ pageLength: 25 });
+      }
+      if (document.getElementById("tbl-members")) {
+        dtMembers = $("#tbl-members").DataTable({ pageLength: 50, order: [[3, "asc"]], stateSave: true, stateDuration: 300 });
+      }
+    } catch (e) {
+      console.error("DataTable init error:", e);
+    }
+
+    if (fleetPk) {
+      setInterval(refreshMembersLive, 15000);
+    }
+  });
+
+  // Doctrine selector — preserve current fleet type in URL
+  document.getElementById("doctrine-select")?.addEventListener("change", function () {
+    const ft = document.getElementById("fleet-type-select")?.value || "";
+    navTo({ fleet: fleetPk, doctrine: this.value, fleet_type: ft || null });
+  });
+
+  // Fleet type selector — update URL without reload so it survives doctrine changes
+  document.getElementById("fleet-type-select")?.addEventListener("change", function () {
+    const u = new URL(window.location.href);
+    if (this.value) u.searchParams.set("fleet_type", this.value);
+    else u.searchParams.delete("fleet_type");
+    history.replaceState({}, "", u.toString());
+  });
+
+  // Fleet type data for pk lookups in FAT/SRP
+  const _afatFleetTypes = JSON.parse(document.getElementById("afat-fleet-types-data")?.textContent || "[]");
+  const _aasrpFleetTypes = JSON.parse(document.getElementById("aasrp-fleet-types-data")?.textContent || "[]");
+
+  function _getAfatFleetTypePk(name) {
+    return _afatFleetTypes.find(ft => ft.name === name)?.pk || "";
+  }
+  function _getAasrpFleetTypePk(name) {
+    return _aasrpFleetTypes.find(ft => ft.name === name)?.pk || "";
+  }
+  function _getSelectedFleetTypeName() {
+    return document.getElementById("fleet-type-select")?.value || "";
+  }
+
+  // Sync button
+  document.getElementById("btn-sync")?.addEventListener("click", function () {
+    post("{% url 'aa_fleet_tool:trigger_sync' %}", {}).then(() => {
+      this.innerHTML = '<i class="fas fa-check"></i> Sync started';
+      setTimeout(() => { this.innerHTML = '<i class="fas fa-sync"></i> Sync'; }, 3000);
+    });
+  });
+
+  // Remove FC
+  document.querySelectorAll(".btn-remove-fc").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("Remove FC?")) return;
+      post("{% url 'aa_fleet_tool:remove_fc' %}", { fc_pk: this.dataset.pk }).then(reload);
+    });
+  });
+
+  // Free Move toggle
+  document.getElementById("btn-toggle-freemove")?.addEventListener("click", function () {
+    const url = "{% url 'aa_fleet_tool:set_free_move' 0 %}".replace("/0/", "/" + this.dataset.fleet + "/");
+    post(url, { value: this.dataset.value }).then(r => { if (r.ok) reload(); else alert(r.error); });
+  });
+
+  // ── MOTD ──────────────────────────────────────────────────────────────
+
+  function stripEveTags(raw) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = (raw || "").replace(/<br\s*\/?>/gi, "\n");
+    return tmp.textContent || tmp.innerText || "";
+  }
+
+  function updateMotdDisplay(raw) {
+    const disp = document.getElementById("motd-display-text");
+    const block = document.getElementById("motd-display-block");
+    if (disp) disp.textContent = stripEveTags(raw);
+    if (block) block.classList.toggle("d-none", !(raw || "").trim());
+  }
+
+  // MOTD inline save
+  document.getElementById("btn-save-motd")?.addEventListener("click", function () {
+    const url = "{% url 'aa_fleet_tool:set_motd' 0 %}".replace("/0/", "/" + this.dataset.fleet + "/");
+    const motd = document.getElementById("motd-text").value;
+    post(url, { motd }).then(r => {
+      if (r.ok) {
+        updateMotdDisplay(motd);
+        bootstrap.Collapse.getInstance(document.getElementById("motd-editor"))?.hide();
+      } else alert(r.error);
+    });
+  });
+
+  // MOTD Library data (from JSON script tag — no data-text attribute needed)
+  const _motdTplData = JSON.parse(document.getElementById("motd-tpl-data")?.textContent || "[]");
+
+  // Load MOTD modal
+  let _loadMotdModal = null;
+  document.getElementById("btn-open-load-motd")?.addEventListener("click", function () {
+    const current = document.getElementById("motd-text")?.value || "";
+    document.getElementById("motd-load-text").value = current;
+    document.querySelectorAll(".motd-tpl-btn").forEach(b => b.classList.remove("active"));
+    _loadMotdModal = new bootstrap.Modal(document.getElementById("modal-load-motd"));
+    _loadMotdModal.show();
+  });
+  document.querySelectorAll(".motd-tpl-btn").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const tpl = _motdTplData.find(t => t.pk === parseInt(this.dataset.pk));
+      if (tpl) document.getElementById("motd-load-text").value = tpl.text;
+      document.querySelectorAll(".motd-tpl-btn").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+    });
+  });
+  document.getElementById("btn-submit-load-motd")?.addEventListener("click", function () {
+    const fleet = document.getElementById("btn-open-load-motd")?.dataset.fleet;
+    if (!fleet) return;
+    const url = "{% url 'aa_fleet_tool:set_motd' 0 %}".replace("/0/", "/" + fleet + "/");
+    const motd = document.getElementById("motd-load-text").value;
+    this.disabled = true;
+    post(url, { motd }).then(r => {
+      this.disabled = false;
+      if (r.ok) {
+        updateMotdDisplay(motd);
+        const inline = document.getElementById("motd-text");
+        if (inline) inline.value = motd;
+        _loadMotdModal?.hide();
+      } else alert(r.error);
+    });
+  });
+
+  // New MOTD Template
+  let _newMotdTplModal = null;
+  document.getElementById("btn-new-motd-tpl")?.addEventListener("click", function () {
+    document.getElementById("new-motd-tpl-name").value = "";
+    document.getElementById("new-motd-tpl-text").value = "";
+    _newMotdTplModal = new bootstrap.Modal(document.getElementById("modal-new-motd-tpl"));
+    _newMotdTplModal.show();
+  });
+  document.getElementById("btn-submit-new-motd-tpl")?.addEventListener("click", function () {
+    const name = document.getElementById("new-motd-tpl-name").value.trim();
+    if (!name) { alert("Name required"); return; }
+    post("{% url 'aa_fleet_tool:create_motd_template' %}", {
+      name,
+      text: document.getElementById("new-motd-tpl-text").value,
+    }).then(r => { if (r.ok) { _newMotdTplModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  // Edit MOTD Template
+  let _editMotdTplModal = null;
+  document.querySelectorAll(".btn-edit-motd-tpl").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const pk = parseInt(this.dataset.pk);
+      const tpl = _motdTplData.find(t => t.pk === pk);
+      if (!tpl) return;
+      document.getElementById("edit-motd-tpl-pk").value = tpl.pk;
+      document.getElementById("edit-motd-tpl-name").value = tpl.name;
+      document.getElementById("edit-motd-tpl-text").value = tpl.text;
+      _editMotdTplModal = new bootstrap.Modal(document.getElementById("modal-edit-motd-tpl"));
+      _editMotdTplModal.show();
+    });
+  });
+  document.getElementById("btn-submit-edit-motd-tpl")?.addEventListener("click", function () {
+    const pk = document.getElementById("edit-motd-tpl-pk").value;
+    const name = document.getElementById("edit-motd-tpl-name").value.trim();
+    if (!name) { alert("Name required"); return; }
+    const url = "{% url 'aa_fleet_tool:update_motd_template' 0 %}".replace("/0/", "/" + pk + "/");
+    post(url, {
+      name,
+      text: document.getElementById("edit-motd-tpl-text").value,
+    }).then(r => { if (r.ok) { _editMotdTplModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  // Delete MOTD Template
+  document.querySelectorAll(".btn-delete-motd-tpl").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm(`Delete template "${this.dataset.name}"?`)) return;
+      const url = "{% url 'aa_fleet_tool:delete_motd_template' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      post(url, {}).then(r => { if (r.ok) reload(); });
+    });
+  });
+
+  // ── Live member table ────────────────────────────────────────────────
+
+  const ROLE_LABEL = { fleet_commander: "FC", wing_commander: "WC", squad_commander: "SC", squad_member: "Member" };
+  const ROLE_COLOR = { fleet_commander: "danger", wing_commander: "warning", squad_commander: "info", squad_member: "secondary" };
+  const isMyFleet = {{ is_my_fleet|yesno:"true,false" }};
+  const fleetPkForButtons = {{ selected_fleet.pk|default:"0" }};
+
+  let dtMembers = null;
+
+  function buildMemberRow(m, doctrineMatch) {
+    const roleLabel = ROLE_LABEL[m.role] || m.role;
+    const roleColor = ROLE_COLOR[m.role] || "secondary";
+    const docCell = doctrinePk
+      ? (doctrineMatch[String(m.character_id)]
+          ? '<span class="badge bg-success"><i class="fas fa-check"></i></span>'
+          : '<span class="badge bg-danger"><i class="fas fa-times"></i></span>')
+      : "";
+    const warpCell = m.takes_fleet_warp
+      ? '<span class="text-muted small"><i class="fas fa-check"></i></span>'
+      : '<span class="badge bg-warning text-dark" title="No fleet warp"><i class="fas fa-ban"></i></span>';
+    const joinTime = m.join_time
+      ? new Date(m.join_time).toISOString().slice(11, 16)
+      : "";
+    const actCell = isMyFleet
+      ? `<td class="text-end text-nowrap">
+          <button class="btn btn-sm btn-outline-warning btn-move-member me-1"
+                  data-fleet="${fleetPkForButtons}" data-char="${m.character_id}" data-charname="${m.character_name}">
+            <i class="fas fa-arrows-alt"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger btn-kick-member"
+                  data-fleet="${fleetPkForButtons}" data-char="${m.character_id}" data-charname="${m.character_name}">
+            <i class="fas fa-times"></i>
+          </button>
+        </td>` : "";
+    const dockedCell = m.station_id
+      ? `<span class="badge bg-secondary" title="Station ID: ${m.station_id}"><i class="fas fa-anchor me-1"></i>Docked</span>`
+      : "";
+    return `<tr>
+      <td>${m.character_name}</td>
+      <td>${m.ship_name}</td>
+      <td>${m.system_name}</td>
+      <td>${dockedCell}</td>
+      <td><span class="badge bg-${roleColor}">${roleLabel}</span></td>
+      <td><small class="text-muted">${m.wing_squad_label || ""}</small></td>
+      <td>${warpCell}</td>
+      <td>${docCell}</td>
+      <td><small class="text-muted">${joinTime}</small></td>
+      ${actCell}
+    </tr>`;
+  }
+
+  function refreshMembersLive() {
+    if (!fleetPk) return;
+    let url = "{% url 'aa_fleet_tool:fleet_members_json' 0 %}".replace("/0/", "/" + fleetPk + "/");
+    if (doctrinePk) url += "?doctrine=" + doctrinePk;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) return;
+
+        // Fleet role counts (always)
+        if (data.fleet_role_counts) {
+          const rc = data.fleet_role_counts;
+          for (const role of ["fleet_commander", "wing_commander", "squad_commander", "squad_member"]) {
+            const el = document.getElementById("role-count-" + role);
+            if (el) el.textContent = rc[role] || 0;
+          }
+          const tot = document.getElementById("total-count");
+          if (tot) tot.textContent = data.member_count;
+          const mb = document.getElementById("member-count-badge");
+          if (mb) mb.textContent = data.member_count;
+        }
+
+        // Doctrine badge
+        const dm = data.doctrine_match || {};
+        const badge = document.querySelector(".on-doctrine-badge");
+        if (badge && doctrinePk) {
+          const onDoc = Object.values(dm).filter(Boolean).length;
+          badge.innerHTML = `<i class="fas fa-check me-1"></i>${onDoc} / ${data.member_count} on-doctrine`;
+          badge.classList.remove("d-none");
+        }
+
+        // Ship role breakdown with progress bars
+        if (doctrinePk && data.role_breakdown) {
+          const rb = data.role_breakdown;
+          for (const role of ["dps", "logi", "booster", "ewar", "other"]) {
+            const d = rb[role] || {count: 0, pct: 0};
+            const cEl = document.getElementById("comp-" + role + "-count");
+            const pEl = document.getElementById("comp-" + role + "-pct");
+            const bEl = document.getElementById("comp-" + role + "-bar");
+            if (cEl) cEl.textContent = d.count;
+            if (pEl) pEl.textContent = d.pct;
+            if (bEl) bEl.style.width = d.pct + "%";
+          }
+          const compCard = document.getElementById("fleet-composition");
+          if (compCard) compCard.classList.remove("d-none");
+        }
+
+        // Rebuild member table
+        const tbody = document.getElementById("member-tbody");
+        if (!tbody) return;
+        if (dtMembers) dtMembers.destroy();
+        tbody.innerHTML = data.members.length
+          ? data.members.map(m => buildMemberRow(m, dm)).join("")
+          : `<tr><td colspan="${isMyFleet ? 10 : 9}" class="text-center text-muted">No members</td></tr>`;
+        dtMembers = $("#tbl-members").DataTable({ pageLength: 50, order: [[3, "asc"]], stateSave: true, stateDuration: 300 });
+
+        // Sync time + live indicator
+        if (data.last_updated) {
+          const syncEl = document.getElementById("sync-time");
+          if (syncEl) syncEl.textContent = new Date(data.last_updated).toISOString().slice(11, 19);
+        }
+        const ind = document.getElementById("live-indicator");
+        if (ind) { ind.style.color = "#0f0"; setTimeout(() => { ind.style.color = "#198754"; }, 500); }
+      })
+      .catch(() => {});
+  }
+
+  // Event delegation for kick/move
+  let _moveMemberModal = null;
+  let _moveFleet = null;
+  let _moveChar = null;
+
+  document.addEventListener("click", function (e) {
+    const kickBtn = e.target.closest(".btn-kick-member");
+    if (kickBtn) {
+      if (!confirm(`Kick ${kickBtn.dataset.charname}?`)) return;
+      const url = "{% url 'aa_fleet_tool:kick_member' 0 %}".replace("/0/", "/" + kickBtn.dataset.fleet + "/");
+      post(url, { character_id: kickBtn.dataset.char }).then(r => {
+        if (r.ok) refreshMembersLive();
+        else alert(r.error);
+      });
+      return;
+    }
+    const moveBtn = e.target.closest(".btn-move-member");
+    if (moveBtn) {
+      _moveFleet = moveBtn.dataset.fleet;
+      _moveChar = moveBtn.dataset.char;
+      document.getElementById("move-char-name").textContent = moveBtn.dataset.charname;
+      _moveMemberModal = new bootstrap.Modal(document.getElementById("modal-move-member"));
+      _moveMemberModal.show();
+    }
+  });
+  document.getElementById("btn-submit-move")?.addEventListener("click", function () {
+    const url = "{% url 'aa_fleet_tool:move_member' 0 %}".replace("/0/", "/" + _moveFleet + "/");
+    post(url, {
+      character_id: _moveChar,
+      role: document.getElementById("move-role").value,
+      wing_id: document.getElementById("move-wing").value,
+      squad_id: document.getElementById("move-squad").value,
+    }).then(r => {
+      if (r.ok) { _moveMemberModal?.hide(); reload(); }
+      else alert(r.error);
+    });
+  });
+
+  // Invite member
+  let _inviteModal = null;
+  let _inviteFleet = null;
+  document.getElementById("btn-invite")?.addEventListener("click", function () {
+    _inviteFleet = this.dataset.fleet;
+    document.getElementById("invite-char-id").value = "";
+    _inviteModal = new bootstrap.Modal(document.getElementById("modal-invite"));
+    _inviteModal.show();
+  });
+  document.getElementById("btn-submit-invite")?.addEventListener("click", function () {
+    const url = "{% url 'aa_fleet_tool:invite_member' 0 %}".replace("/0/", "/" + _inviteFleet + "/");
+    post(url, {
+      character_id: document.getElementById("invite-char-id").value,
+      role: document.getElementById("invite-role").value,
+    }).then(r => {
+      if (r.ok) { _inviteModal?.hide(); reload(); }
+      else alert("Invite failed: " + r.error);
+    });
+  });
+
+  // ── Wing management ───────────────────────────────────────────────────
+
+  document.querySelectorAll(".btn-create-wing").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const url = "{% url 'aa_fleet_tool:create_wing' 0 %}".replace("/0/", "/" + this.dataset.fleet + "/");
+      post(url, {}).then(r => { if (r.ok) reload(); else alert(r.error); });
+    });
+  });
+
+  let _renameWingModal = null, _renameWingUrl = null;
+  document.querySelectorAll(".btn-rename-wing").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _renameWingUrl = this.dataset.url;
+      document.getElementById("rename-wing-input").value = this.dataset.name;
+      _renameWingModal = new bootstrap.Modal(document.getElementById("modal-rename-wing"));
+      _renameWingModal.show();
+    });
+  });
+  document.getElementById("btn-submit-rename-wing")?.addEventListener("click", function () {
+    post(_renameWingUrl, { name: document.getElementById("rename-wing-input").value }).then(r => {
+      if (r.ok) { _renameWingModal?.hide(); reload(); } else alert(r.error);
+    });
+  });
+
+  document.querySelectorAll(".btn-delete-wing").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("Delete wing?")) return;
+      post(this.dataset.url, {}).then(r => { if (r.ok) reload(); else alert(r.error); });
+    });
+  });
+
+  // ── Squad management ──────────────────────────────────────────────────
+
+  document.querySelectorAll(".btn-create-squad").forEach(btn => {
+    btn.addEventListener("click", function () {
+      post(this.dataset.url, {}).then(r => { if (r.ok) reload(); else alert(r.error); });
+    });
+  });
+
+  let _renameSquadModal = null, _renameSquadUrl = null, _renameSquadWing = null;
+  document.querySelectorAll(".btn-rename-squad").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _renameSquadUrl = this.dataset.url;
+      _renameSquadWing = this.dataset.wing;
+      document.getElementById("rename-squad-input").value = this.dataset.name;
+      _renameSquadModal = new bootstrap.Modal(document.getElementById("modal-rename-squad"));
+      _renameSquadModal.show();
+    });
+  });
+  document.getElementById("btn-submit-rename-squad")?.addEventListener("click", function () {
+    post(_renameSquadUrl, { name: document.getElementById("rename-squad-input").value, wing_id: _renameSquadWing }).then(r => {
+      if (r.ok) { _renameSquadModal?.hide(); reload(); } else alert(r.error);
+    });
+  });
+
+  document.querySelectorAll(".btn-delete-squad").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("Delete squad?")) return;
+      post(this.dataset.url, {}).then(r => { if (r.ok) reload(); else alert(r.error); });
+    });
+  });
+
+  // ── Doctrine management ───────────────────────────────────────────────
+
+  let _newDoctrineModal = null;
+  document.getElementById("btn-new-doctrine")?.addEventListener("click", function () {
+    _newDoctrineModal = new bootstrap.Modal(document.getElementById("modal-new-doctrine"));
+    _newDoctrineModal.show();
+  });
+  document.getElementById("btn-submit-new-doctrine")?.addEventListener("click", function () {
+    post("{% url 'aa_fleet_tool:create_doctrine' %}", {
+      name: document.getElementById("new-doctrine-name").value,
+      description: document.getElementById("new-doctrine-desc").value,
+    }).then(r => { if (r.ok) { _newDoctrineModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  document.querySelectorAll(".btn-delete-doctrine").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("Delete doctrine?")) return;
+      const url = "{% url 'aa_fleet_tool:delete_doctrine' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      post(url, {}).then(r => { if (r.ok) reload(); });
+    });
+  });
+
+  // Ship typeahead
+  let _shipSearchTimer = null;
+  const _shipSearchInput = document.getElementById("doctrine-ship-search");
+  const _shipResultsDiv = document.getElementById("ship-search-results");
+  if (_shipSearchInput) {
+    _shipSearchInput.addEventListener("input", function () {
+      clearTimeout(_shipSearchTimer);
+      document.getElementById("doctrine-ship-type-id").value = "";
+      document.getElementById("doctrine-ship-name").value = "";
+      const q = this.value.trim();
+      if (q.length < 2) { _shipResultsDiv.style.display = "none"; return; }
+      _shipSearchTimer = setTimeout(() => {
+        fetch("{% url 'aa_fleet_tool:ship_search' %}?q=" + encodeURIComponent(q))
+          .then(r => r.json())
+          .then(data => {
+            _shipResultsDiv.innerHTML = "";
+            if (!data.results.length) { _shipResultsDiv.style.display = "none"; return; }
+            data.results.forEach(ship => {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "list-group-item list-group-item-action py-1 small";
+              btn.textContent = ship.name;
+              btn.addEventListener("click", function () {
+                _shipSearchInput.value = ship.name;
+                document.getElementById("doctrine-ship-type-id").value = ship.type_id;
+                document.getElementById("doctrine-ship-name").value = ship.name;
+                _shipResultsDiv.style.display = "none";
+              });
+              _shipResultsDiv.appendChild(btn);
+            });
+            _shipResultsDiv.style.display = "block";
+          });
+      }, 300);
+    });
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest("#modal-add-doctrine-ship")) {
+      if (_shipResultsDiv) _shipResultsDiv.style.display = "none";
+    }
+  });
+
+  let _addShipDocPk = null, _addShipModal = null;
+  document.querySelectorAll(".btn-add-doctrine-ship").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _addShipDocPk = this.dataset.pk;
+      if (_shipSearchInput) _shipSearchInput.value = "";
+      document.getElementById("doctrine-ship-type-id").value = "";
+      document.getElementById("doctrine-ship-name").value = "";
+      document.getElementById("add-ship-error").classList.add("d-none");
+      if (_shipResultsDiv) _shipResultsDiv.style.display = "none";
+      _addShipModal = new bootstrap.Modal(document.getElementById("modal-add-doctrine-ship"));
+      _addShipModal.show();
+    });
+  });
+  document.getElementById("btn-submit-add-ship")?.addEventListener("click", function () {
+    const typeId = document.getElementById("doctrine-ship-type-id").value;
+    const shipName = document.getElementById("doctrine-ship-name").value;
+    const errDiv = document.getElementById("add-ship-error");
+    if (!typeId) {
+      errDiv.textContent = "Please select a ship from the list.";
+      errDiv.classList.remove("d-none");
+      return;
+    }
+    errDiv.classList.add("d-none");
+    const url = "{% url 'aa_fleet_tool:add_doctrine_ship' 0 %}".replace("/0/", "/" + _addShipDocPk + "/");
+    post(url, {
+      ship_type_id: typeId,
+      ship_name: shipName,
+      role_hint: document.getElementById("doctrine-ship-role").value,
+    }).then(r => {
+      if (r.ok) { _addShipModal?.hide(); reload(); }
+      else { errDiv.textContent = r.error || "Error"; errDiv.classList.remove("d-none"); }
+    });
+  });
+
+  document.querySelectorAll(".btn-remove-doctrine-ship").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const url = "{% url 'aa_fleet_tool:remove_doctrine_ship' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      post(url, {}).then(r => { if (r.ok) reload(); });
+    });
+  });
+
+  // ── Fleet Layouts ─────────────────────────────────────────────────────
+
+  let _newLayoutModal = null;
+  document.getElementById("btn-new-layout")?.addEventListener("click", function () {
+    document.getElementById("new-layout-name").value = "";
+    document.getElementById("new-layout-desc").value = "";
+    _newLayoutModal = new bootstrap.Modal(document.getElementById("modal-new-layout"));
+    _newLayoutModal.show();
+  });
+  document.getElementById("btn-submit-new-layout")?.addEventListener("click", function () {
+    const name = document.getElementById("new-layout-name").value.trim();
+    if (!name) { alert("Name required"); return; }
+    post("{% url 'aa_fleet_tool:create_layout' %}", {
+      name,
+      description: document.getElementById("new-layout-desc").value.trim(),
+    }).then(r => { if (r.ok) { _newLayoutModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  document.querySelectorAll(".btn-delete-layout").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm(`Delete layout "${this.dataset.name}"?`)) return;
+      const url = "{% url 'aa_fleet_tool:delete_layout' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      post(url, {}).then(r => { if (r.ok) reload(); else alert(r.error); });
+    });
+  });
+
+  let _addLayoutWingPk = null, _addLayoutWingModal = null;
+  document.querySelectorAll(".btn-add-layout-wing").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _addLayoutWingPk = this.dataset.pk;
+      document.getElementById("add-layout-wing-name").value = "";
+      _addLayoutWingModal = new bootstrap.Modal(document.getElementById("modal-add-layout-wing"));
+      _addLayoutWingModal.show();
+    });
+  });
+  document.getElementById("btn-submit-add-layout-wing")?.addEventListener("click", function () {
+    const name = document.getElementById("add-layout-wing-name").value.trim();
+    if (!name) { alert("Name required"); return; }
+    const url = "{% url 'aa_fleet_tool:add_layout_wing' 0 %}".replace("/0/", "/" + _addLayoutWingPk + "/");
+    post(url, { name }).then(r => { if (r.ok) { _addLayoutWingModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  let _renameLayoutWingPk = null, _renameLayoutWingModal = null;
+  document.querySelectorAll(".btn-rename-layout-wing").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _renameLayoutWingPk = this.dataset.pk;
+      document.getElementById("rename-layout-wing-name").value = this.dataset.name;
+      _renameLayoutWingModal = new bootstrap.Modal(document.getElementById("modal-rename-layout-wing"));
+      _renameLayoutWingModal.show();
+    });
+  });
+  document.getElementById("btn-submit-rename-layout-wing")?.addEventListener("click", function () {
+    const name = document.getElementById("rename-layout-wing-name").value.trim();
+    if (!name) { alert("Name required"); return; }
+    const url = "{% url 'aa_fleet_tool:rename_layout_wing' 0 %}".replace("/0/", "/" + _renameLayoutWingPk + "/");
+    post(url, { name }).then(r => { if (r.ok) { _renameLayoutWingModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  document.querySelectorAll(".btn-delete-layout-wing").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("Delete wing?")) return;
+      const url = "{% url 'aa_fleet_tool:delete_layout_wing' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      post(url, {}).then(r => { if (r.ok) reload(); else alert(r.error); });
+    });
+  });
+
+  let _addLayoutSquadWingPk = null, _addLayoutSquadModal = null;
+  document.querySelectorAll(".btn-add-layout-squad").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _addLayoutSquadWingPk = this.dataset.pk;
+      document.getElementById("add-layout-squad-name").value = "";
+      _addLayoutSquadModal = new bootstrap.Modal(document.getElementById("modal-add-layout-squad"));
+      _addLayoutSquadModal.show();
+    });
+  });
+  document.getElementById("btn-submit-add-layout-squad")?.addEventListener("click", function () {
+    const name = document.getElementById("add-layout-squad-name").value.trim();
+    if (!name) { alert("Name required"); return; }
+    const url = "{% url 'aa_fleet_tool:add_layout_squad' 0 %}".replace("/0/", "/" + _addLayoutSquadWingPk + "/");
+    post(url, { name }).then(r => { if (r.ok) { _addLayoutSquadModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  let _renameLayoutSquadPk = null, _renameLayoutSquadModal = null;
+  document.querySelectorAll(".btn-rename-layout-squad").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _renameLayoutSquadPk = this.dataset.pk;
+      document.getElementById("rename-layout-squad-name").value = this.dataset.name;
+      _renameLayoutSquadModal = new bootstrap.Modal(document.getElementById("modal-rename-layout-squad"));
+      _renameLayoutSquadModal.show();
+    });
+  });
+  document.getElementById("btn-submit-rename-layout-squad")?.addEventListener("click", function () {
+    const name = document.getElementById("rename-layout-squad-name").value.trim();
+    if (!name) { alert("Name required"); return; }
+    const url = "{% url 'aa_fleet_tool:rename_layout_squad' 0 %}".replace("/0/", "/" + _renameLayoutSquadPk + "/");
+    post(url, { name }).then(r => { if (r.ok) { _renameLayoutSquadModal?.hide(); reload(); } else alert(r.error); });
+  });
+
+  document.querySelectorAll(".btn-delete-layout-squad").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("Delete squad?")) return;
+      const url = "{% url 'aa_fleet_tool:delete_layout_squad' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      post(url, {}).then(r => { if (r.ok) reload(); else alert(r.error); });
+    });
+  });
+
+  // Apply Layout (button in fleet detail)
+  let _applyLayoutModal = null;
+  document.getElementById("btn-open-apply-layout")?.addEventListener("click", function () {
+    document.getElementById("apply-layout-select").value = "";
+    _applyLayoutModal = new bootstrap.Modal(document.getElementById("modal-apply-layout"));
+    _applyLayoutModal.show();
+  });
+  document.getElementById("btn-submit-apply-layout")?.addEventListener("click", function () {
+    const sel = document.getElementById("apply-layout-select");
+    const layoutPk = sel.value;
+    if (!layoutPk) { alert("Please select a layout."); return; }
+    const tmplUrl = sel.options[sel.selectedIndex].dataset.url;
+    const url = tmplUrl.replace("/0/", "/" + fleetPk + "/");
+    this.disabled = true;
+    post(url, {}).then(r => {
+      this.disabled = false;
+      if (r.ok) {
+        _applyLayoutModal?.hide();
+        if (r.warnings?.length) alert("Done with warnings:\n" + r.warnings.join("\n"));
+        reload();
+      } else {
+        alert(r.error || "Error applying layout");
+      }
+    }).catch(() => { this.disabled = false; alert("Network error"); });
+  });
+
+  // ── Fleet name inline edit ───────────────────────────────────────────
+
+  document.getElementById("btn-edit-fleet-name")?.addEventListener("click", function () {
+    const display = document.getElementById("fleet-name-display");
+    const current = display?.textContent.trim().replace(/^\(no name\)$/, "") || "";
+    const newName = prompt("Fleet name:", current);
+    if (newName === null) return;
+    const url = "{% url 'aa_fleet_tool:set_fleet_name' 0 %}".replace("/0/", "/" + fleetPk + "/");
+    post(url, { name: newName.trim() }).then(r => {
+      if (r.ok) {
+        if (display) {
+          display.textContent = r.name || "(no name)";
+          display.style.color = r.name ? "" : "var(--bs-secondary)";
+        }
+      } else alert(r.error);
+    });
+  });
+
+  function _getFleetName() {
+    const el = document.getElementById("fleet-name-display");
+    const raw = el?.textContent.trim() || "";
+    return raw === "(no name)" ? "" : raw;
+  }
+
+  function _getSelectedDoctrineName() {
+    const sel = document.getElementById("doctrine-select");
+    if (!sel || !sel.value) return "";
+    const opt = sel.options[sel.selectedIndex];
+    // Strip trailing " (N ships)" or " (N fits)"
+    return opt.text.replace(/\s*\(\d+.*?\)\s*$/, "").trim();
+  }
+
+  // ── FAT Link ─────────────────────────────────────────────────────────
+
+  let _fatLinkModal = null;
+  document.getElementById("btn-open-fat-link")?.addEventListener("click", function () {
+    const ftName = _getSelectedFleetTypeName();
+    if (!ftName) { alert("Fleet Type nicht ausgewählt"); return; }
+    document.getElementById("fat-link-result")?.classList.add("d-none");
+    document.getElementById("fat-link-form-body")?.classList.remove("d-none");
+    const footer = document.getElementById("fat-link-footer");
+    if (footer) footer.style.display = "";
+    // Reset to clickable
+    const radio = document.getElementById("fat-type-clickable");
+    if (radio) { radio.checked = true; document.getElementById("fat-link-duration-row")?.classList.remove("d-none"); }
+    // Pre-fill from global selectors
+    const nameEl = document.getElementById("fat-link-name");
+    if (nameEl) nameEl.value = _getFleetName();
+    const docEl = document.getElementById("fat-link-doctrine");
+    if (docEl) docEl.value = _getSelectedDoctrineName();
+    const ftDisplay = document.getElementById("fat-link-fleet-type-display");
+    const ftPkEl = document.getElementById("fat-link-fleet-type-pk");
+    if (ftDisplay) ftDisplay.value = ftName;
+    if (ftPkEl) ftPkEl.value = _getAfatFleetTypePk(ftName);
+    _fatLinkModal = new bootstrap.Modal(document.getElementById("modal-fat-link"));
+    _fatLinkModal.show();
+  });
+  // Show/hide duration row based on link type
+  document.querySelectorAll("input[name='fat-link-type']").forEach(r => {
+    r.addEventListener("change", function () {
+      const dRow = document.getElementById("fat-link-duration-row");
+      if (dRow) dRow.classList.toggle("d-none", this.value === "esi");
+    });
+  });
+  document.getElementById("btn-submit-fat-link")?.addEventListener("click", function () {
+    const name = document.getElementById("fat-link-name")?.value.trim();
+    if (!name) { alert("Fleet name required"); return; }
+    const linkType = document.querySelector("input[name='fat-link-type']:checked")?.value || "clickable";
+    const url = "{% url 'aa_fleet_tool:create_fat_link' 0 %}".replace("/0/", "/" + fleetPk + "/");
+    const doctrineEl = document.getElementById("fat-link-doctrine");
+    this.disabled = true;
+    post(url, {
+      name,
+      link_type: linkType,
+      fleet_type_pk: document.getElementById("fat-link-fleet-type-pk")?.value || "",
+      doctrine_name: doctrineEl?.value || "",
+      duration: document.getElementById("fat-link-duration")?.value || "60",
+    }).then(r => {
+      this.disabled = false;
+      if (r.ok) {
+        let fullUrl, titleText, msgText;
+        if (r.link_type === "esi") {
+          fullUrl = window.location.origin + r.details_url;
+          titleText = "ESI FAT Link created!";
+          msgText = "Members are being registered automatically. View details:";
+        } else {
+          fullUrl = window.location.origin + r.register_url;
+          titleText = "FAT Link created!";
+          msgText = "Share this link in fleet chat:";
+        }
+        const titleEl = document.getElementById("fat-link-result-title");
+        const msgEl = document.getElementById("fat-link-result-msg");
+        const linkEl = document.getElementById("fat-link-url");
+        if (titleEl) titleEl.textContent = titleText;
+        if (msgEl) msgEl.textContent = msgText;
+        if (linkEl) { linkEl.href = fullUrl; linkEl.textContent = fullUrl; }
+        document.getElementById("fat-link-result")?.classList.remove("d-none");
+        document.getElementById("fat-link-form-body")?.classList.add("d-none");
+        const footer = document.getElementById("fat-link-footer");
+        if (footer) footer.innerHTML = '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>';
+      } else {
+        alert("FAT Link error: " + r.error);
+      }
+    });
+  });
+  document.getElementById("btn-copy-fat-link")?.addEventListener("click", function () {
+    const url = document.getElementById("fat-link-url")?.textContent;
+    if (url) navigator.clipboard.writeText(url).then(() => {
+      this.innerHTML = '<i class="fas fa-check"></i> Copied';
+      setTimeout(() => { this.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+    });
+  });
+
+  // ── SRP Link ─────────────────────────────────────────────────────────
+
+  let _srpLinkModal = null;
+  document.getElementById("btn-open-srp-link")?.addEventListener("click", function () {
+    const ftName = _getSelectedFleetTypeName();
+    if (!ftName) { alert("Fleet Type nicht ausgewählt"); return; }
+    document.getElementById("srp-link-result")?.classList.add("d-none");
+    document.getElementById("srp-link-form-body")?.classList.remove("d-none");
+    const footer = document.getElementById("srp-link-footer");
+    if (footer) footer.style.display = "";
+    // Pre-fill from global selectors
+    const nameEl = document.getElementById("srp-link-name");
+    if (nameEl) nameEl.value = _getFleetName();
+    const docEl = document.getElementById("srp-link-doctrine");
+    if (docEl) docEl.value = _getSelectedDoctrineName();
+    const ftDisplay = document.getElementById("srp-link-fleet-type-display");
+    const ftPkEl = document.getElementById("srp-link-fleet-type-pk");
+    if (ftDisplay) ftDisplay.value = ftName;
+    if (ftPkEl) ftPkEl.value = _getAasrpFleetTypePk(ftName);
+    _srpLinkModal = new bootstrap.Modal(document.getElementById("modal-srp-link"));
+    _srpLinkModal.show();
+  });
+  document.getElementById("btn-submit-srp-link")?.addEventListener("click", function () {
+    const srp_name = document.getElementById("srp-link-name")?.value.trim();
+    const fleet_doctrine = document.getElementById("srp-link-doctrine")?.value.trim();
+    if (!srp_name) { alert("SRP name required"); return; }
+    if (!fleet_doctrine) { alert("Doctrine required"); return; }
+    const url = "{% url 'aa_fleet_tool:create_srp_link' 0 %}".replace("/0/", "/" + fleetPk + "/");
+    this.disabled = true;
+    post(url, {
+      srp_name,
+      fleet_doctrine,
+      fleet_type_name: document.getElementById("srp-link-fleet-type-display")?.value || "",
+      aar_link: document.getElementById("srp-link-aar")?.value.trim() || "",
+    }).then(r => {
+      this.disabled = false;
+      if (r.ok) {
+        const fullUrl = window.location.origin + r.request_url;
+        const linkEl = document.getElementById("srp-link-url");
+        if (linkEl) { linkEl.href = fullUrl; linkEl.textContent = fullUrl; }
+        document.getElementById("srp-link-result")?.classList.remove("d-none");
+        document.getElementById("srp-link-form-body")?.classList.add("d-none");
+        const footer = document.getElementById("srp-link-footer");
+        if (footer) footer.innerHTML = '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>';
+      } else {
+        alert("SRP Link error: " + r.error);
+      }
+    });
+  });
+  document.getElementById("btn-copy-srp-link")?.addEventListener("click", function () {
+    const url = document.getElementById("srp-link-url")?.textContent;
+    if (url) navigator.clipboard.writeText(url).then(() => {
+      this.innerHTML = '<i class="fas fa-check"></i> Copied';
+      setTimeout(() => { this.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+    });
+  });
+
+}());
+</script>
+{% endblock %}

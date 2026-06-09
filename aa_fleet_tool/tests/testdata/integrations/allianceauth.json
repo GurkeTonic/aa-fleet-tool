@@ -1,0 +1,31 @@
+{
+    "EveCharacter": [
+        {
+            "character_id": 1001,
+            "character_name": "Test FC",
+            "corporation_id": 2001,
+            "corporation_name": "Test Corp",
+            "corporation_ticker": "TST",
+            "alliance_id": 3001,
+            "alliance_name": "Test Alliance",
+            "alliance_ticker": "TSTA"
+        },
+        {
+            "character_id": 1002,
+            "character_name": "Test Member",
+            "corporation_id": 2001,
+            "corporation_name": "Test Corp",
+            "corporation_ticker": "TST",
+            "alliance_id": 3001,
+            "alliance_name": "Test Alliance",
+            "alliance_ticker": "TSTA"
+        },
+        {
+            "character_id": 1003,
+            "character_name": "Other Member",
+            "corporation_id": 2002,
+            "corporation_name": "Other Corp",
+            "corporation_ticker": "OTH"
+        }
+    ]
+}

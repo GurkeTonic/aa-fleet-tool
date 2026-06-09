@@ -1,0 +1,89 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [
+    "hatchling",
+]
+
+[project]
+name = "aa-fleet-tool"
+description = "Fleet Commander tool for Alliance Auth — member overview, MOTD library, doctrine tracking, FAT & SRP integration."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "GurkeTonic", email = "pberbuir@googlemail.com" },
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+dynamic = [
+    "version",
+]
+dependencies = [
+    "allianceauth>=5",
+    "requests",
+]
+
+[project.optional-dependencies]
+tests = [
+    "coverage",
+    "factory-boy",
+]
+tests-allianceauth-latest = [
+    "allianceauth>=5",
+    "coverage",
+    "factory-boy",
+    "requests",
+]
+
+[project.entry-points."allianceauth.app"]
+aa_fleet_tool = "aa_fleet_tool.apps:AaFleetToolConfig"
+
+[project.urls]
+Changelog = "https://github.com/GurkeTonic/aa-fleet-tool/blob/master/CHANGELOG.md"
+Documentation = "https://github.com/GurkeTonic/aa-fleet-tool/blob/master/README.md"
+Homepage = "https://github.com/GurkeTonic/aa-fleet-tool"
+Source = "https://github.com/GurkeTonic/aa-fleet-tool"
+Tracker = "https://github.com/GurkeTonic/aa-fleet-tool/issues"
+
+[tool.hatch]
+build.include = [
+    "/aa_fleet_tool",
+]
+version.path = "aa_fleet_tool/__init__.py"
+
+[tool.isort]
+known_allianceauth = ["allianceauth", "esi"]
+known_third_party = ["requests", "celery"]
+sections = [
+    "FUTURE",
+    "STDLIB",
+    "THIRDPARTY",
+    "ALLIANCEAUTH",
+    "DJANGO",
+    "FIRSTPARTY",
+    "LOCALFOLDER",
+]
+
+[tool.pylint.main]
+max-attributes = 10
+max-positional-arguments = 6
+
+[tool.pylint.messages_control]
+disable = [
+    "C",
+    "R",
+]

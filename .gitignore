@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.tox/
+.coverage
+coverage.xml
+*.sqlite3
+static/
+/log/
+.env
+node_modules/
