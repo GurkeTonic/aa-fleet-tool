@@ -108,6 +108,8 @@ def _esi_get(url: str, access_token: str, cache_key: str = "", timeout: int = 30
     try:
         _handle_esi_response(resp)
     except requests.HTTPError:
+        if resp.status_code == 404:
+            return resp
         return None
 
     if resp.status_code == 200 and cache_key:
@@ -259,6 +261,9 @@ def _update_fleet_members(fc_pk: int):
         access_token,
         cache_key=f"fleet_tool_members_{char_id}_{fleet_id}",
     )
+    if resp is not None and resp.status_code == 404:
+        fleet.delete()
+        return
     if resp is not None and resp.status_code == 200:
         members_raw = resp.json()
 
