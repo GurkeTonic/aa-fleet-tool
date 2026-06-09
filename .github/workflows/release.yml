@@ -9,10 +9,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
 
-    environment:
-      name: pypi-release
     permissions:
-      id-token: write
       contents: write
 
     steps:
@@ -41,5 +38,3 @@ jobs:
           files: |
             dist/*
 
-      - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
