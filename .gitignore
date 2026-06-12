@@ -11,3 +11,6 @@ static/
 /log/
 .env
 node_modules/
+
+# Claude Code
+.claude/
