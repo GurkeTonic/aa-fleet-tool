@@ -71,3 +71,29 @@ def composition_counts(ship_type_ids: list, doctrine_roles: dict | None = None) 
         role: {"count": c, "pct": round(c * 100 / total) if total else 0}
         for role, c in counts.items()
     }
+
+
+def in_system_ship_ids(members) -> list:
+    """Ship type ids of members undocked in the fleet boss's solar system.
+
+    ``members`` is an iterable of FleetMember instances. The boss is the
+    ``fleet_commander`` member; only members in his system and not docked
+    (``station_id`` unset) count. Returns ``[]`` when there is no boss or his
+    system is unknown.
+    """
+    members = list(members)
+    boss_system = next(
+        (
+            m.solar_system_id
+            for m in members
+            if m.role == "fleet_commander" and m.solar_system_id
+        ),
+        None,
+    )
+    if not boss_system:
+        return []
+    return [
+        m.ship_type_id
+        for m in members
+        if m.solar_system_id == boss_system and not m.station_id
+    ]

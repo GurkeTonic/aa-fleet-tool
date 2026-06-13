@@ -194,9 +194,9 @@
                 {% endif %}
               </div>
 
-              <!-- Ship composition (always visible) + live DPS/Logi graph -->
-              <div class="row mt-3 g-3 align-items-center">
-                <div class="col-xl-6">
+              <!-- Ship composition (always visible) + live DPS/Logi graphs -->
+              <div class="row mt-3 g-3">
+                <div class="col-xl-4">
                   <div id="fleet-composition">
                     <div class="d-flex align-items-center gap-2 mb-2">
                       <span class="badge bg-danger fs-6" style="min-width:84px">DPS</span>
@@ -240,9 +240,16 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-xl-6">
+                <div class="col-xl-4">
+                  <div class="text-center small text-muted mb-1">{% translate "Whole fleet" %}</div>
                   <div style="position:relative;height:180px">
                     <canvas id="comp-chart"></canvas>
+                  </div>
+                </div>
+                <div class="col-xl-4">
+                  <div class="text-center small text-muted mb-1">{% translate "In FC system (undocked)" %}</div>
+                  <div style="position:relative;height:180px">
+                    <canvas id="comp-chart-system"></canvas>
                   </div>
                 </div>
               </div>
@@ -376,24 +383,24 @@
     window.location.href = u.toString();
   }
 
-  // ── Composition graph (DPS / Logi over the fleet's lifetime) ──────────
-  let compChart = null;
+  // ── Composition graphs (DPS / Logi over the fleet's lifetime) ──────────
+  // Two charts with identical logic: the whole fleet and only members
+  // undocked in the FC's solar system.
+  let compChart = null, compChartSystem = null;
   function fmtTime(iso) {
     try { return new Date(iso).toISOString().slice(11, 16); } catch (e) { return ""; }
   }
-  function initCompChart() {
-    const canvas = document.getElementById("comp-chart");
-    if (!canvas || typeof Chart === "undefined") return;
-    let initial = [];
-    try { initial = JSON.parse(document.getElementById("snapshot-data")?.textContent || "[]"); } catch (e) {}
-    compChart = new Chart(canvas, {
+  function buildCompChart(canvasId, initial, keys) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === "undefined") return null;
+    return new Chart(canvas, {
       type: "line",
       data: {
         labels: initial.map(s => fmtTime(s.timestamp)),
         datasets: [
-          { label: "DPS", data: initial.map(s => s.dps), borderColor: "#dc3545", backgroundColor: "rgba(220,53,69,.12)", tension: .3, fill: true, pointRadius: 0, borderWidth: 2 },
-          { label: "Logi", data: initial.map(s => s.logi), borderColor: "#198754", backgroundColor: "rgba(25,135,84,.12)", tension: .3, fill: true, pointRadius: 0, borderWidth: 2 },
-          { label: "{% translate 'Total' %}", data: initial.map(s => s.total), borderColor: "#6c757d", borderDash: [4, 4], tension: .3, fill: false, pointRadius: 0, borderWidth: 1 },
+          { label: "DPS", data: initial.map(s => s[keys.dps]), borderColor: "#dc3545", backgroundColor: "rgba(220,53,69,.12)", tension: .3, fill: true, pointRadius: 0, borderWidth: 2 },
+          { label: "Logi", data: initial.map(s => s[keys.logi]), borderColor: "#198754", backgroundColor: "rgba(25,135,84,.12)", tension: .3, fill: true, pointRadius: 0, borderWidth: 2 },
+          { label: "{% translate 'Total' %}", data: initial.map(s => s[keys.total]), borderColor: "#6c757d", borderDash: [4, 4], tension: .3, fill: false, pointRadius: 0, borderWidth: 1 },
         ],
       },
       options: {
@@ -404,13 +411,23 @@
       },
     });
   }
+  function initCompChart() {
+    let initial = [];
+    try { initial = JSON.parse(document.getElementById("snapshot-data")?.textContent || "[]"); } catch (e) {}
+    compChart = buildCompChart("comp-chart", initial, { dps: "dps", logi: "logi", total: "total" });
+    compChartSystem = buildCompChart("comp-chart-system", initial, { dps: "in_system_dps", logi: "in_system_logi", total: "in_system_total" });
+  }
+  function applyHistory(chart, history, keys) {
+    if (!chart || !history) return;
+    chart.data.labels = history.map(s => fmtTime(s.t));
+    chart.data.datasets[0].data = history.map(s => s[keys.dps]);
+    chart.data.datasets[1].data = history.map(s => s[keys.logi]);
+    chart.data.datasets[2].data = history.map(s => s[keys.total]);
+    chart.update();
+  }
   function updateCompChart(history) {
-    if (!compChart || !history) return;
-    compChart.data.labels = history.map(s => fmtTime(s.t));
-    compChart.data.datasets[0].data = history.map(s => s.dps);
-    compChart.data.datasets[1].data = history.map(s => s.logi);
-    compChart.data.datasets[2].data = history.map(s => s.total);
-    compChart.update();
+    applyHistory(compChart, history, { dps: "dps", logi: "logi", total: "total" });
+    applyHistory(compChartSystem, history, { dps: "sys_dps", logi: "sys_logi", total: "sys_total" });
   }
 
   // DataTables init

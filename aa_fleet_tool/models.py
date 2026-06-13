@@ -89,6 +89,13 @@ class FleetSnapshot(models.Model):
     booster = models.PositiveIntegerField(default=0)
     ewar = models.PositiveIntegerField(default=0)
     other = models.PositiveIntegerField(default=0)
+    # Same buckets, but only members undocked in the fleet boss's solar system.
+    in_system_total = models.PositiveIntegerField(default=0)
+    in_system_dps = models.PositiveIntegerField(default=0)
+    in_system_logi = models.PositiveIntegerField(default=0)
+    in_system_booster = models.PositiveIntegerField(default=0)
+    in_system_ewar = models.PositiveIntegerField(default=0)
+    in_system_other = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["timestamp"]

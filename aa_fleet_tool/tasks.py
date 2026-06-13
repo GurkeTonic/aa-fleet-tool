@@ -355,7 +355,7 @@ def _write_snapshot(fleet) -> None:
     from datetime import timedelta
 
     from .app_settings import FLEET_TOOL_SNAPSHOT_WINDOW
-    from .composition import composition_counts
+    from .composition import composition_counts, in_system_ship_ids
     from .models import FleetSnapshot
 
     now = timezone.now()
@@ -363,8 +363,11 @@ def _write_snapshot(fleet) -> None:
     if last and (now - last.timestamp).total_seconds() < 20:
         return  # avoid double snapshots when check_fc_in_fleet re-triggers an update
 
-    ship_ids = list(fleet.members.values_list("ship_type_id", flat=True))
+    members = list(fleet.members.all())
+    ship_ids = [m.ship_type_id for m in members]
     comp = composition_counts(ship_ids)
+    sys_ids = in_system_ship_ids(members)
+    sys_comp = composition_counts(sys_ids)
     FleetSnapshot.objects.create(
         fleet=fleet,
         timestamp=now,
@@ -374,6 +377,12 @@ def _write_snapshot(fleet) -> None:
         booster=comp["booster"]["count"],
         ewar=comp["ewar"]["count"],
         other=comp["other"]["count"],
+        in_system_total=len(sys_ids),
+        in_system_dps=sys_comp["dps"]["count"],
+        in_system_logi=sys_comp["logi"]["count"],
+        in_system_booster=sys_comp["booster"]["count"],
+        in_system_ewar=sys_comp["ewar"]["count"],
+        in_system_other=sys_comp["other"]["count"],
     )
 
     cutoff = now - timedelta(seconds=FLEET_TOOL_SNAPSHOT_WINDOW)

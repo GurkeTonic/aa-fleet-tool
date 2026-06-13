@@ -181,6 +181,16 @@ class TestFleetMembersJson(FleetToolTestCase):
         self.assertEqual(len(data["history"]), 1)
         self.assertEqual(data["history"][0]["total"], 2)
 
+    def test_history_includes_in_system_series(self):
+        response = self.client.get(
+            reverse("aa_fleet_tool:fleet_members_json", args=[self.fleet.pk])
+        )
+        data = response.json()
+        # second graph is fed by the in-system snapshot series
+        self.assertIn("sys_dps", data["history"][0])
+        self.assertIn("sys_logi", data["history"][0])
+        self.assertIn("sys_total", data["history"][0])
+
 
 class TestMotdTemplates(FleetToolTestCase):
     """Public MOTDs need manage_doctrine; private MOTDs belong to their owner."""

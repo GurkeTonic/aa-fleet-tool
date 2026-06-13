@@ -5,6 +5,13 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-13
+
+### Added
+
+- A second composition graph next to the first, showing only the fleet
+  members in the FC's system (undocked).
+
 ## [0.2.6] - 2026-06-13
 
 ### Fixed

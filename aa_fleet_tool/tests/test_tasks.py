@@ -269,3 +269,43 @@ class TestUpdateFleetMembers(FleetToolTestCase):
         timestamps = list(self.fleet.snapshots.values_list("timestamp", flat=True))
         self.assertEqual(len(timestamps), 1)  # old pruned, only the fresh one remains
         self.assertGreater(timestamps[0], timezone.now() - timedelta(minutes=10))
+
+    def test_snapshot_records_in_system_subset(self):
+        from aa_fleet_tool.models import FleetSnapshot
+
+        boss_system = 30000142
+        FleetMember.objects.create(
+            fleet=self.fleet,
+            character_id=1,
+            ship_type_id=587,
+            role="fleet_commander",
+            solar_system_id=boss_system,
+        )
+        FleetMember.objects.create(  # same system, in space → counted
+            fleet=self.fleet,
+            character_id=2,
+            ship_type_id=588,
+            role="squad_member",
+            solar_system_id=boss_system,
+        )
+        FleetMember.objects.create(  # same system but docked → excluded
+            fleet=self.fleet,
+            character_id=3,
+            ship_type_id=589,
+            role="squad_member",
+            solar_system_id=boss_system,
+            station_id=60003760,
+        )
+        FleetMember.objects.create(  # different system → excluded
+            fleet=self.fleet,
+            character_id=4,
+            ship_type_id=590,
+            role="squad_member",
+            solar_system_id=30000144,
+        )
+
+        tasks._write_snapshot(self.fleet)  # pylint: disable=protected-access
+
+        snap = FleetSnapshot.objects.latest("timestamp")
+        self.assertEqual(snap.total, 4)
+        self.assertEqual(snap.in_system_total, 2)  # boss + same-system undocked

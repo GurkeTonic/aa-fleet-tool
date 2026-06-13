@@ -83,7 +83,15 @@ def index(request):
                 [m.ship_type_id for m in selected_fleet_members], doctrine_roles
             )
             snapshot_data = list(
-                selected_fleet.snapshots.values("timestamp", "dps", "logi", "total")
+                selected_fleet.snapshots.values(
+                    "timestamp",
+                    "dps",
+                    "logi",
+                    "total",
+                    "in_system_dps",
+                    "in_system_logi",
+                    "in_system_total",
+                )
             )
 
             for wing in selected_fleet.wings.prefetch_related("squads"):
@@ -288,8 +296,19 @@ def fleet_members_json(request, fleet_pk):
             "dps": s["dps"],
             "logi": s["logi"],
             "total": s["total"],
+            "sys_dps": s["in_system_dps"],
+            "sys_logi": s["in_system_logi"],
+            "sys_total": s["in_system_total"],
         }
-        for s in fleet.snapshots.values("timestamp", "dps", "logi", "total")
+        for s in fleet.snapshots.values(
+            "timestamp",
+            "dps",
+            "logi",
+            "total",
+            "in_system_dps",
+            "in_system_logi",
+            "in_system_total",
+        )
     ]
 
     return JsonResponse(

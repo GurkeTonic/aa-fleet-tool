@@ -48,3 +48,35 @@ class TestComposition(TestCase):
             {1: "logi", 2: "ewar", 3: "any", 4: "fc", 5: "scout"}
         )
         self.assertEqual(ov, {1: "logi", 2: "ewar"})
+
+
+class TestInSystemShipIds(TestCase):
+    """Only members undocked in the fleet boss's solar system are counted."""
+
+    @staticmethod
+    def _member(role, system, ship, station=None):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            role=role,
+            solar_system_id=system,
+            ship_type_id=ship,
+            station_id=station,
+        )
+
+    def test_filters_to_boss_system_undocked(self):
+        members = [
+            self._member("fleet_commander", 30000142, 587),  # boss, in space
+            self._member("squad_member", 30000142, 588),  # same system, in space
+            self._member("squad_member", 30000142, 589, station=60003760),  # docked
+            self._member("squad_member", 30000144, 590),  # other system
+        ]
+        self.assertEqual(composition.in_system_ship_ids(members), [587, 588])
+
+    def test_no_boss_returns_empty(self):
+        members = [self._member("squad_member", 30000142, 587)]
+        self.assertEqual(composition.in_system_ship_ids(members), [])
+
+    def test_boss_without_known_system_returns_empty(self):
+        members = [self._member("fleet_commander", 0, 587)]
+        self.assertEqual(composition.in_system_ship_ids(members), [])
