@@ -5,6 +5,24 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-06-13
+
+### Changed
+
+- The fleet ping is now sent in the background, so the button responds
+  instantly even when posting to several Discord webhooks.
+- Page JavaScript moved out of the templates into cacheable static files
+  (no behaviour change).
+
+### Fixed
+
+- Discord webhook rate limits (HTTP 429) are now retried, honouring Discord's
+  Retry-After, instead of failing the ping.
+- The active fleets list no longer loads every member of every fleet just to
+  show the per-fleet count.
+- ESI errors while fetching members/wings are now logged instead of silently
+  swallowed.
+
 ## [0.4.2] - 2026-06-13
 
 ### Fixed
