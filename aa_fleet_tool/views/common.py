@@ -5,7 +5,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 
 from allianceauth.services.hooks import get_extension_logger
-from esi.exceptions import HTTPClientError, HTTPNotModified, HTTPServerError
+from esi.exceptions import (
+    ESIBucketLimitException,
+    ESIErrorLimitException,
+    HTTPClientError,
+    HTTPNotModified,
+    HTTPServerError,
+)
 
 from ..constants import WRITE_SCOPE
 from ..models import ActiveFleet, Doctrine, FleetCommander, FleetLayout, MOTDTemplate
@@ -34,7 +40,9 @@ def esi_call(call):
     ``call`` is a zero-arg callable returning the (unexecuted) ESI operation, so
     we can run ``.result()`` inside the try/except. Returns ``(data, None)`` on
     success or ``(None, JsonResponse)`` with an error payload to return as-is.
-    A 304 (not modified) is treated as success with ``data=None``.
+    A 304 (not modified) is treated as success with ``data=None``. Any failure is
+    turned into a JSON response — a write endpoint must never return a non-JSON
+    500, which the frontend can only show as an opaque "server error".
     """
     try:
         return call().result(), None
@@ -44,6 +52,21 @@ def esi_call(call):
         status = getattr(exc, "status_code", 502)
         logger.warning("ESI write failed (%s): %s", status, exc)
         return None, JsonResponse({"ok": False, "error": str(exc)}, status=status)
+    except (ESIErrorLimitException, ESIBucketLimitException) as exc:
+        logger.warning("ESI rate/error limited during write: %s", exc)
+        return None, JsonResponse(
+            {
+                "ok": False,
+                "error": "ESI is rate limited right now — try again shortly.",
+            },
+            status=429,
+        )
+    except Exception:
+        logger.exception("Unexpected error during ESI write")
+        return None, JsonResponse(
+            {"ok": False, "error": "Unexpected error — see server log."},
+            status=500,
+        )
 
 
 def fleet_write(request, fleet_pk):

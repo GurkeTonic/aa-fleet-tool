@@ -5,6 +5,13 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-06-13
+
+### Fixed
+
+- Fleet actions (e.g. setting the MOTD) now show a clear message instead of a
+  generic "server error" when ESI is rate limited or unavailable.
+
 ## [0.4.1] - 2026-06-13
 
 ### Changed

@@ -3,10 +3,10 @@
 # Standard Library
 import importlib
 from http import HTTPStatus
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 # Django
-from django.test import Client
+from django.test import Client, SimpleTestCase
 from django.urls import reverse
 
 # AA Fleet Tool
@@ -360,3 +360,32 @@ class TestApplyLayout(FleetToolTestCase):
 
         # A 304 must not bubble up as a 500.
         self.assertEqual(response.status_code, HTTPStatus.OK)
+
+
+class TestEsiCallErrorHandling(SimpleTestCase):
+    """A failed ESI write always returns JSON, never a non-JSON 500."""
+
+    @staticmethod
+    def _raising(exc):
+        op = Mock()
+        op.result.side_effect = exc
+        return lambda: op
+
+    def test_rate_limit_returns_json_429(self):
+        from esi.exceptions import ESIErrorLimitException
+
+        from aa_fleet_tool.views.common import esi_call
+
+        data, err = esi_call(self._raising(ESIErrorLimitException()))
+        self.assertIsNone(data)
+        self.assertEqual(err.status_code, 429)
+
+    def test_unexpected_exception_returns_json_500(self):
+        from aa_fleet_tool.views.common import esi_call
+
+        # An unexpected exception must be caught and returned as JSON, so the
+        # frontend never sees a non-JSON 500 page.
+        data, err = esi_call(self._raising(ValueError("boom")))
+        self.assertIsNone(data)
+        self.assertEqual(err.status_code, 500)
+        self.assertFalse(err.headers["Content-Type"].startswith("text/html"))
