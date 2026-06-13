@@ -12,10 +12,11 @@ from django.urls import reverse
 # AA Fleet Tool
 from aa_fleet_tool.tests import FleetToolTestCase
 
-# The views package re-exports a view function named ``commanders`` (used as the
-# URL callable), which shadows the submodule of the same name. Resolve the real
-# module from sys.modules so patching its ``check_fc_in_fleet`` is unambiguous.
+# The views package re-exports view functions (``commanders``, ``layouts``) that
+# shadow the submodules of the same name. Resolve the real modules so patching
+# their module-level names (``check_fc_in_fleet``, ``esi``) is unambiguous.
 commanders_views = importlib.import_module("aa_fleet_tool.views.commanders")
+layouts_views = importlib.import_module("aa_fleet_tool.views.layouts")
 
 
 class TestIndexView(FleetToolTestCase):
@@ -320,7 +321,7 @@ class TestApplyLayout(FleetToolTestCase):
         )
 
     @patch("aa_fleet_tool.views.common.get_token")
-    @patch("aa_fleet_tool.views.layouts.esi")
+    @patch.object(layouts_views, "esi")
     def test_reads_wings_with_force_refresh(self, mock_esi, mock_get_token):
         mock_get_token.return_value = object()  # truthy write token
         wings_op = mock_esi.client.Fleets.GetFleetsFleetIdWings
@@ -335,7 +336,7 @@ class TestApplyLayout(FleetToolTestCase):
         wings_op.return_value.result.assert_called_once_with(force_refresh=True)
 
     @patch("aa_fleet_tool.views.common.get_token")
-    @patch("aa_fleet_tool.views.layouts.esi")
+    @patch.object(layouts_views, "esi")
     def test_survives_304_not_modified(self, mock_esi, mock_get_token):
         from esi.exceptions import HTTPNotModified
 

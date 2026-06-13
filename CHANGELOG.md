@@ -5,6 +5,12 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-06-13
+
+### Fixed
+
+- Fix an unreliable test (no functional change).
+
 ## [0.2.5] - 2026-06-13
 
 ### Fixed
