@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from esi.exceptions import HTTPClientError, HTTPServerError
+from esi.exceptions import HTTPClientError, HTTPNotModified, HTTPServerError
 
 from ..models import FleetLayout, FleetLayoutSquad, FleetLayoutWing
 from ..providers import esi
@@ -136,14 +136,19 @@ def apply_layout(request, fleet_pk, layout_pk):
 
     fleet_id = fleet.fleet_id
 
-    # Fetch current wings fresh from ESI
+    # Fetch current wings fresh from ESI. force_refresh bypasses the ETag cache;
+    # without it ESI answers 304 (HTTPNotModified) and .result() raises instead
+    # of returning the wing list.
     try:
         existing_wings = sorted(
             esi.client.Fleets.GetFleetsFleetIdWings(
                 fleet_id=fleet_id, token=token
-            ).result(),
+            ).result(force_refresh=True),
             key=lambda w: w.id,
         )
+    except HTTPNotModified:
+        # Nothing changed since the last fetch — no existing wings to reuse.
+        existing_wings = []
     except (HTTPClientError, HTTPServerError) as exc:
         status = getattr(exc, "status_code", 502)
         return JsonResponse(

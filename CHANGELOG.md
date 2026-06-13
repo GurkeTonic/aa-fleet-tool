@@ -5,6 +5,12 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-06-13
+
+### Fixed
+
+- Server error when applying a fleet layout to an active fleet.
+
 ## [0.2.4] - 2026-06-13
 
 ### Changed

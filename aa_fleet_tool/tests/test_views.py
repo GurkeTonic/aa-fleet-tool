@@ -283,3 +283,69 @@ class TestDoctrineCrud(FleetToolTestCase):
     def test_create_doctrine_requires_name(self):
         response = self.client.post(reverse("aa_fleet_tool:create_doctrine"), data={})
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+
+
+class TestApplyLayout(FleetToolTestCase):
+    """Applying a layout reads the current wings with a cache-bypassing fetch."""
+
+    def setUp(self):
+        from allianceauth.tests.auth_utils import AuthUtils
+
+        from aa_fleet_tool.models import (
+            ActiveFleet,
+            FleetCommander,
+            FleetLayout,
+            FleetLayoutSquad,
+            FleetLayoutWing,
+        )
+
+        self.user = AuthUtils.add_permission_to_user_by_name(
+            "aa_fleet_tool.manage_doctrine", self.user
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.fc = FleetCommander.objects.create(
+            user=self.user, character=self.user_character.character
+        )
+        self.fleet = ActiveFleet.objects.create(fc=self.fc, fleet_id=42)
+        self.layout = FleetLayout.objects.create(name="CTA")
+        wing = FleetLayoutWing.objects.create(
+            layout=self.layout, position=0, name="DPS"
+        )
+        FleetLayoutSquad.objects.create(wing=wing, position=0, name="Squad 1")
+
+    def _url(self):
+        return reverse(
+            "aa_fleet_tool:apply_layout", args=[self.fleet.pk, self.layout.pk]
+        )
+
+    @patch("aa_fleet_tool.views.common.get_token")
+    @patch("aa_fleet_tool.views.layouts.esi")
+    def test_reads_wings_with_force_refresh(self, mock_esi, mock_get_token):
+        mock_get_token.return_value = object()  # truthy write token
+        wings_op = mock_esi.client.Fleets.GetFleetsFleetIdWings
+        wings_op.return_value.result.return_value = []  # no existing wings
+
+        response = self.client.post(self._url())
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertTrue(response.json()["ok"])
+        # The read must bypass the ETag cache, else ESI answers 304 and the
+        # endpoint 500s (regression: missing force_refresh).
+        wings_op.return_value.result.assert_called_once_with(force_refresh=True)
+
+    @patch("aa_fleet_tool.views.common.get_token")
+    @patch("aa_fleet_tool.views.layouts.esi")
+    def test_survives_304_not_modified(self, mock_esi, mock_get_token):
+        from esi.exceptions import HTTPNotModified
+
+        mock_get_token.return_value = object()
+        wings_op = mock_esi.client.Fleets.GetFleetsFleetIdWings
+        wings_op.return_value.result.side_effect = HTTPNotModified(
+            status_code=304, headers={}
+        )
+
+        response = self.client.post(self._url())
+
+        # A 304 must not bubble up as a 500.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
