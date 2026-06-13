@@ -1,0 +1,103 @@
+{% extends "aa_fleet_tool/base.html" %}
+{% load i18n %}
+
+{% block page_nav_right %}
+<li class="nav-item ms-1">
+  <button class="btn btn-secondary btn-sm" id="btn-sync"><i class="fas fa-sync"></i> {% translate "Sync" %}</button>
+</li>
+{% endblock %}
+
+{% block page_content %}
+      <div class="alert alert-info py-2 small">
+        <i class="fas fa-info-circle me-1"></i>
+        {% blocktranslate %}An FC only polls ESI while active. Press <strong>Fleet Start</strong> when you form up; it stops automatically when the fleet ends (or press <strong>Fleet Stop</strong>).{% endblocktranslate %}
+      </div>
+      <table id="tbl-commanders" class="table table-sm table-striped" style="width:100%">
+        <thead>
+          <tr>
+            <th>{% translate "Character" %}</th>
+            <th>{% translate "User" %}</th>
+            <th>{% translate "Status" %}</th>
+            <th>{% translate "Fleet Size" %}</th>
+            <th>{% translate "Last Sync" %}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fc in all_fcs %}
+          <tr>
+            <td>{{ fc.character.character_name }}</td>
+            <td>{{ fc.user.username }}</td>
+            <td>
+              {% if fc.active_fleet %}
+              <span class="badge bg-success"><i class="fas fa-circle me-1"></i>{% translate "In Fleet" %}</span>
+              {% elif fc.is_active %}
+              <span class="badge bg-info text-dark"><i class="fas fa-satellite-dish me-1"></i>{% translate "Tracking…" %}</span>
+              {% else %}
+              <span class="badge bg-secondary">{% translate "Idle" %}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if fc.active_fleet %}{{ fc.active_fleet.member_count }}{% else %}—{% endif %}
+            </td>
+            <td>
+              {% if fc.active_fleet and fc.active_fleet.last_updated %}
+              {{ fc.active_fleet.last_updated|date:"d.m.Y H:i:s" }} UTC
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-nowrap">
+              {% if fc.user == request.user %}
+              {% if fc.is_active %}
+              <button class="btn btn-sm btn-outline-warning btn-stop-fleet" data-pk="{{ fc.pk }}">
+                <i class="fas fa-stop me-1"></i>{% translate "Fleet Stop" %}
+              </button>
+              {% else %}
+              <button class="btn btn-sm btn-success btn-start-fleet" data-pk="{{ fc.pk }}">
+                <i class="fas fa-play me-1"></i>{% translate "Fleet Start" %}
+              </button>
+              {% endif %}
+              <button class="btn btn-sm btn-outline-danger btn-remove-fc ms-1" data-pk="{{ fc.pk }}">
+                <i class="fas fa-trash"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <a href="{% url 'aa_fleet_tool:add_fc' %}" class="btn btn-primary btn-sm mt-2">
+        <i class="fas fa-plus"></i> {% translate "Add FC" %}
+      </a>
+{% endblock %}
+
+{% block page_javascript %}
+<script>
+(function () {
+  document.getElementById("btn-sync")?.addEventListener("click", function () {
+    ftPost("{% url 'aa_fleet_tool:trigger_sync' %}", {}).then(() => {
+      this.innerHTML = '<i class="fas fa-check"></i> {% translate "Sync started" %}';
+      setTimeout(() => { this.innerHTML = '<i class="fas fa-sync"></i> {% translate "Sync" %}'; }, 3000);
+    });
+  });
+  document.querySelectorAll(".btn-start-fleet").forEach(btn => {
+    btn.addEventListener("click", function () {
+      this.disabled = true;
+      ftPost("{% url 'aa_fleet_tool:start_fleet' %}", { fc_pk: this.dataset.pk }).then(ftReload);
+    });
+  });
+  document.querySelectorAll(".btn-stop-fleet").forEach(btn => {
+    btn.addEventListener("click", function () {
+      this.disabled = true;
+      ftPost("{% url 'aa_fleet_tool:stop_fleet' %}", { fc_pk: this.dataset.pk }).then(ftReload);
+    });
+  });
+  document.querySelectorAll(".btn-remove-fc").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("{% translate 'Remove FC?' %}")) return;
+      ftPost("{% url 'aa_fleet_tool:remove_fc' %}", { fc_pk: this.dataset.pk }).then(ftReload);
+    });
+  });
+  if (document.getElementById("tbl-commanders")) $("#tbl-commanders").DataTable({ pageLength: 25 });
+}());
+</script>
+{% endblock %}

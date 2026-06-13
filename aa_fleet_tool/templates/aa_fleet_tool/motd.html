@@ -1,0 +1,187 @@
+{% extends "aa_fleet_tool/base.html" %}
+{% load i18n %}
+
+{% block page_content %}
+      <div class="row">
+
+        <!-- ── Shared / public MOTDs ── -->
+        <div class="col-md-6">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <strong><i class="fas fa-users me-1"></i>{% translate "Shared MOTDs" %}</strong>
+            {% if can_manage_public %}
+            <button class="btn btn-sm btn-outline-primary btn-new-motd" data-public="true">
+              <i class="fas fa-plus me-1"></i>{% translate "New Template" %}
+            </button>
+            {% endif %}
+          </div>
+          {% for tpl in public_templates %}
+          <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+              <strong>{{ tpl.name }}</strong>
+              {% if can_manage_public %}
+              <div class="d-flex gap-1">
+                <button class="btn btn-xs btn-outline-secondary py-0 px-1 btn-edit-motd-tpl" data-pk="{{ tpl.pk }}">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-motd-tpl" data-pk="{{ tpl.pk }}" data-name="{{ tpl.name }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              {% endif %}
+            </div>
+            <div class="card-body py-2">
+              <pre class="small text-muted mb-0" style="white-space:pre-wrap;font-family:inherit">{{ tpl.text|striptags|truncatechars:300 }}</pre>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>{% translate "No shared templates yet." %}</div>
+          {% endfor %}
+        </div>
+
+        <!-- ── Private / per-user MOTDs ── -->
+        <div class="col-md-6">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <strong><i class="fas fa-user-lock me-1"></i>{% translate "My MOTDs" %}</strong>
+            <button class="btn btn-sm btn-outline-success btn-new-motd" data-public="false">
+              <i class="fas fa-plus me-1"></i>{% translate "New Template" %}
+            </button>
+          </div>
+          {% for tpl in my_templates %}
+          <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+              <strong>{{ tpl.name }}</strong>
+              <div class="d-flex gap-1">
+                <button class="btn btn-xs btn-outline-secondary py-0 px-1 btn-edit-motd-tpl" data-pk="{{ tpl.pk }}">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-delete-motd-tpl" data-pk="{{ tpl.pk }}" data-name="{{ tpl.name }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body py-2">
+              <pre class="small text-muted mb-0" style="white-space:pre-wrap;font-family:inherit">{{ tpl.text|striptags|truncatechars:300 }}</pre>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>{% translate "You have no private MOTDs yet. Only you can see these." %}</div>
+          {% endfor %}
+        </div>
+
+      </div>
+{% endblock %}
+
+{% block page_modals %}
+<!-- Modal: New MOTD Template -->
+<div class="modal fade" id="modal-new-motd-tpl" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">{% translate "New MOTD Template" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-secondary py-1 small mb-3" id="new-motd-scope"></div>
+      <div class="mb-3">
+        <label class="form-label">{% translate "Name" %} <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="new-motd-tpl-name" placeholder="{% translate "e.g. Armor HAC Form-Up" %}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">{% translate "Text" %}</label>
+        <textarea class="form-control" id="new-motd-tpl-text" rows="10"
+                  placeholder="{% translate "MOTD text…" %}" style="font-family:monospace"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-new-motd-tpl">{% translate "Create" %}</button>
+    </div>
+  </div></div>
+</div>
+<!-- Modal: Edit MOTD Template -->
+<div class="modal fade" id="modal-edit-motd-tpl" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">{% translate "Edit MOTD Template" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-motd-tpl-pk">
+      <div class="mb-3">
+        <label class="form-label">{% translate "Name" %} <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="edit-motd-tpl-name">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">{% translate "Text" %}</label>
+        <textarea class="form-control" id="edit-motd-tpl-text" rows="10"
+                  style="font-family:monospace"></textarea>
+        <small class="text-muted">{% translate "EVE XML format — will be set as MOTD without changes." %}</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-edit-motd-tpl">{% translate "Save" %}</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block page_javascript %}
+{{ motd_tpl_data|json_script:"motd-tpl-data" }}
+<script>
+(function () {
+  const _motdTplData = JSON.parse(document.getElementById("motd-tpl-data")?.textContent || "[]");
+  const SCOPE_SHARED = "{% translate 'This template is shared with all FCs.' %}";
+  const SCOPE_PRIVATE = "{% translate 'This template is private — only you can see it.' %}";
+  let _newMotdTplModal = null;
+  let _newIsPublic = false;
+
+  document.querySelectorAll(".btn-new-motd").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _newIsPublic = this.dataset.public === "true";
+      document.getElementById("new-motd-tpl-name").value = "";
+      document.getElementById("new-motd-tpl-text").value = "";
+      document.getElementById("new-motd-scope").textContent = _newIsPublic ? SCOPE_SHARED : SCOPE_PRIVATE;
+      _newMotdTplModal = new bootstrap.Modal(document.getElementById("modal-new-motd-tpl"));
+      _newMotdTplModal.show();
+    });
+  });
+  document.getElementById("btn-submit-new-motd-tpl")?.addEventListener("click", function () {
+    const name = document.getElementById("new-motd-tpl-name").value.trim();
+    if (!name) { alert("{% translate 'Name required' %}"); return; }
+    ftPost("{% url 'aa_fleet_tool:create_motd_template' %}", {
+      name,
+      text: document.getElementById("new-motd-tpl-text").value,
+      is_public: _newIsPublic,
+    }).then(r => { if (r.ok) { _newMotdTplModal?.hide(); ftReload(); } else alert(r.error); });
+  });
+
+  let _editMotdTplModal = null;
+  document.querySelectorAll(".btn-edit-motd-tpl").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const tpl = _motdTplData.find(t => t.pk === parseInt(this.dataset.pk));
+      if (!tpl) return;
+      document.getElementById("edit-motd-tpl-pk").value = tpl.pk;
+      document.getElementById("edit-motd-tpl-name").value = tpl.name;
+      document.getElementById("edit-motd-tpl-text").value = tpl.text;
+      _editMotdTplModal = new bootstrap.Modal(document.getElementById("modal-edit-motd-tpl"));
+      _editMotdTplModal.show();
+    });
+  });
+  document.getElementById("btn-submit-edit-motd-tpl")?.addEventListener("click", function () {
+    const pk = document.getElementById("edit-motd-tpl-pk").value;
+    const name = document.getElementById("edit-motd-tpl-name").value.trim();
+    if (!name) { alert("{% translate 'Name required' %}"); return; }
+    const url = "{% url 'aa_fleet_tool:update_motd_template' 0 %}".replace("/0/", "/" + pk + "/");
+    ftPost(url, { name, text: document.getElementById("edit-motd-tpl-text").value })
+      .then(r => { if (r.ok) { _editMotdTplModal?.hide(); ftReload(); } else alert(r.error); });
+  });
+  document.querySelectorAll(".btn-delete-motd-tpl").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("{% translate 'Delete this template?' %}")) return;
+      const url = "{% url 'aa_fleet_tool:delete_motd_template' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      ftPost(url, {}).then(r => { if (r.ok) ftReload(); });
+    });
+  });
+}());
+</script>
+{% endblock %}

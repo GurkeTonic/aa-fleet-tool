@@ -5,12 +5,21 @@ from . import views
 app_name = "aa_fleet_tool"
 
 urlpatterns = [
+    # Pages
     path("", views.index, name="index"),
+    path("commanders/", views.commanders, name="commanders"),
+    path("doctrines/", views.doctrines, name="doctrines"),
+    path("layouts/", views.layouts, name="layouts"),
+    path("motd/", views.motd, name="motd"),
+
+    # Fleet Commander management
     path("add-fc/", views.add_fc, name="add_fc"),
     path("remove-fc/", views.remove_fc, name="remove_fc"),
+    path("fleet-start/", views.start_fleet, name="start_fleet"),
+    path("fleet-stop/", views.stop_fleet, name="stop_fleet"),
     path("sync/", views.trigger_sync, name="trigger_sync"),
 
-    # Fleet management
+    # Live fleet management
     path("fleet/<int:fleet_pk>/name/", views.set_fleet_name, name="set_fleet_name"),
     path("fleet/<int:fleet_pk>/motd/", views.set_motd, name="set_motd"),
     path("fleet/<int:fleet_pk>/free-move/", views.set_free_move, name="set_free_move"),
@@ -46,6 +55,7 @@ urlpatterns = [
     # Integrations
     path("fleet/<int:fleet_pk>/fat-link/create/", views.create_fat_link, name="create_fat_link"),
     path("fleet/<int:fleet_pk>/srp-link/create/", views.create_srp_link, name="create_srp_link"),
+    path("fleet/<int:fleet_pk>/ping/", views.send_fleet_ping, name="send_fleet_ping"),
 
     # Doctrine
     path("doctrine/create/", views.create_doctrine, name="create_doctrine"),

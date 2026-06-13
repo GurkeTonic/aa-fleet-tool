@@ -1,0 +1,940 @@
+# German translation for aa-fleet-tool.
+# Copyright (C) 2026 GurkeTonic
+# This file is distributed under the same license as the aa-fleet-tool package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: aa-fleet-tool\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-12 23:48+0000\n"
+"PO-Revision-Date: 2026-06-12 19:14+0000\n"
+"Last-Translator: GurkeTonic\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: templates/aa_fleet_tool/base.html:8 templates/aa_fleet_tool/base.html:10
+msgid "Fleet Tool"
+msgstr "Flottentyp"
+
+#: templates/aa_fleet_tool/base.html:15
+msgid "Active Fleets"
+msgstr "Aktive Flotten"
+
+#: templates/aa_fleet_tool/base.html:21
+msgid "Fleet Commanders"
+msgstr "Fleet Commander"
+
+#: templates/aa_fleet_tool/base.html:26
+#: templates/aa_fleet_tool/doctrines.html:8
+msgid "Doctrines"
+msgstr "Doktrinen"
+
+#: templates/aa_fleet_tool/base.html:31 templates/aa_fleet_tool/layouts.html:8
+msgid "Fleet Layouts"
+msgstr "Flotten-Layouts"
+
+#: templates/aa_fleet_tool/base.html:36
+msgid "MOTD Library"
+msgstr "MOTD-Bibliothek"
+
+#: templates/aa_fleet_tool/base.html:74 templates/aa_fleet_tool/fleets.html:362
+msgid "Server error – see console."
+msgstr "Serverfehler – siehe Konsole."
+
+#: templates/aa_fleet_tool/commanders.html:6
+#: templates/aa_fleet_tool/commanders.html:79
+#: templates/aa_fleet_tool/fleets.html:62
+#: templates/aa_fleet_tool/fleets.html:467
+msgid "Sync"
+msgstr "Sync"
+
+#: templates/aa_fleet_tool/commanders.html:13
+msgid ""
+"An FC only polls ESI while active. Press <strong>Fleet Start</strong> when "
+"you form up; it stops automatically when the fleet ends (or press "
+"<strong>Fleet Stop</strong>)."
+msgstr ""
+"Ein FC pollt ESI nur, solange er aktiv ist. Drücke <strong>Fleet Start</"
+"strong>, wenn du eine Flotte aufmachst; es stoppt automatisch, wenn die "
+"Flotte endet (oder drücke <strong>Fleet Stop</strong>)."
+
+#: templates/aa_fleet_tool/commanders.html:18
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:36
+#: templates/aa_fleet_tool/partials/_member_table.html:5
+msgid "Character"
+msgstr "Charakter"
+
+#: templates/aa_fleet_tool/commanders.html:19
+msgid "User"
+msgstr "Benutzer"
+
+#: templates/aa_fleet_tool/commanders.html:20
+msgid "Status"
+msgstr "Status"
+
+#: templates/aa_fleet_tool/commanders.html:21
+msgid "Fleet Size"
+msgstr "Flottengröße"
+
+#: templates/aa_fleet_tool/commanders.html:22
+msgid "Last Sync"
+msgstr "Letzter Sync"
+
+#: templates/aa_fleet_tool/commanders.html:33
+msgid "In Fleet"
+msgstr "In Flotte"
+
+#: templates/aa_fleet_tool/commanders.html:35
+msgid "Tracking…"
+msgstr "Tracking…"
+
+#: templates/aa_fleet_tool/commanders.html:37
+msgid "Idle"
+msgstr "Inaktiv"
+
+#: templates/aa_fleet_tool/commanders.html:52
+msgid "Fleet Stop"
+msgstr "Fleet Stop"
+
+#: templates/aa_fleet_tool/commanders.html:56
+msgid "Fleet Start"
+msgstr "Fleet Start"
+
+#: templates/aa_fleet_tool/commanders.html:69
+msgid "Add FC"
+msgstr "FC hinzufügen"
+
+#: templates/aa_fleet_tool/commanders.html:78
+#: templates/aa_fleet_tool/fleets.html:466
+msgid "Sync started"
+msgstr "Sync gestartet"
+
+#: templates/aa_fleet_tool/commanders.html:96
+#: templates/aa_fleet_tool/fleets.html:474
+msgid "Remove FC?"
+msgstr "FC entfernen?"
+
+#: templates/aa_fleet_tool/doctrines.html:29
+#: templates/aa_fleet_tool/doctrines.html:93
+#: templates/aa_fleet_tool/partials/_member_table.html:6
+msgid "Ship"
+msgstr "Schiff"
+
+#: templates/aa_fleet_tool/doctrines.html:29
+#: templates/aa_fleet_tool/doctrines.html:103
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:38
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:83
+#: templates/aa_fleet_tool/partials/_member_table.html:9
+msgid "Role"
+msgstr "Rolle"
+
+#: templates/aa_fleet_tool/doctrines.html:45
+msgid "No ships"
+msgstr "Keine Schiffe"
+
+#: templates/aa_fleet_tool/doctrines.html:52
+msgid "Add Ship"
+msgstr "Schiff hinzufügen"
+
+#: templates/aa_fleet_tool/doctrines.html:55
+msgid "Delete Doctrine"
+msgstr "Doktrin löschen"
+
+#: templates/aa_fleet_tool/doctrines.html:62
+msgid "No doctrine defined."
+msgstr "Keine Doktrin definiert."
+
+#: templates/aa_fleet_tool/doctrines.html:73
+msgid "New Doctrine"
+msgstr "Neue Doktrin"
+
+#: templates/aa_fleet_tool/doctrines.html:76
+#: templates/aa_fleet_tool/layouts.html:96 templates/aa_fleet_tool/motd.html:85
+#: templates/aa_fleet_tool/motd.html:110
+msgid "Name"
+msgstr "Name"
+
+#: templates/aa_fleet_tool/doctrines.html:77
+#: templates/aa_fleet_tool/layouts.html:100
+msgid "Description (optional)"
+msgstr "Beschreibung (optional)"
+
+#: templates/aa_fleet_tool/doctrines.html:80
+#: templates/aa_fleet_tool/doctrines.html:117
+#: templates/aa_fleet_tool/layouts.html:105
+#: templates/aa_fleet_tool/layouts.html:122
+#: templates/aa_fleet_tool/layouts.html:139
+#: templates/aa_fleet_tool/layouts.html:156
+#: templates/aa_fleet_tool/layouts.html:173
+#: templates/aa_fleet_tool/motd.html:95 templates/aa_fleet_tool/motd.html:121
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:11
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:25
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:66
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:93
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:136
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:165
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:229
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:278
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:324
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: templates/aa_fleet_tool/doctrines.html:81
+#: templates/aa_fleet_tool/layouts.html:106
+#: templates/aa_fleet_tool/motd.html:96
+msgid "Create"
+msgstr "Erstellen"
+
+#: templates/aa_fleet_tool/doctrines.html:88
+msgid "Add Ship to Doctrine"
+msgstr "Schiff zur Doktrin hinzufügen"
+
+#: templates/aa_fleet_tool/doctrines.html:95
+msgid "Start typing to search… (e.g. Ferox)"
+msgstr "Zum Suchen tippen… (z. B. Ferox)"
+
+#: templates/aa_fleet_tool/doctrines.html:105
+msgid "Any"
+msgstr "Beliebig"
+
+#: templates/aa_fleet_tool/doctrines.html:118
+#: templates/aa_fleet_tool/layouts.html:123
+#: templates/aa_fleet_tool/layouts.html:157
+msgid "Add"
+msgstr "Hinzufügen"
+
+#: templates/aa_fleet_tool/doctrines.html:140
+msgid "Delete doctrine?"
+msgstr "Doktrin löschen?"
+
+#: templates/aa_fleet_tool/doctrines.html:202
+msgid "Please select a ship from the list."
+msgstr "Bitte ein Schiff aus der Liste wählen."
+
+#: templates/aa_fleet_tool/doctrines.html:210
+msgid "Error"
+msgstr "Fehler"
+
+#: templates/aa_fleet_tool/fleets.html:7
+msgid ""
+"No active fleets. Register an FC with <strong>+ Add FC</strong> and start a "
+"fleet in game."
+msgstr ""
+"Keine aktiven Flotten. Registriere einen FC mit <strong>+ FC hinzufügen</"
+"strong> und starte eine Flotte im Spiel."
+
+#: templates/aa_fleet_tool/fleets.html:14
+msgid "Fleets"
+msgstr "Flotten"
+
+#: templates/aa_fleet_tool/fleets.html:26
+msgid "Fleet"
+msgstr "Flotte"
+
+#: templates/aa_fleet_tool/fleets.html:42
+#: templates/aa_fleet_tool/fleets.html:354
+msgid "(no name)"
+msgstr "(kein Name)"
+
+#: templates/aa_fleet_tool/fleets.html:46
+msgid "Edit fleet name"
+msgstr "Flottennamen bearbeiten"
+
+#: templates/aa_fleet_tool/fleets.html:54
+#: templates/aa_fleet_tool/fleets.html:149
+msgid "Member"
+msgstr "Mitglied"
+
+#: templates/aa_fleet_tool/fleets.html:58
+#: templates/aa_fleet_tool/fleets.html:98
+msgid "Free Move"
+msgstr "Free Move"
+
+#: templates/aa_fleet_tool/fleets.html:58
+#: templates/aa_fleet_tool/fleets.html:98
+msgid "ON"
+msgstr "AN"
+
+#: templates/aa_fleet_tool/fleets.html:58
+#: templates/aa_fleet_tool/fleets.html:98
+msgid "OFF"
+msgstr "AUS"
+
+#: templates/aa_fleet_tool/fleets.html:71
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:291
+msgid "Fleet Ping"
+msgstr "Flottengröße"
+
+#: templates/aa_fleet_tool/fleets.html:76
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:147
+msgid "Apply Layout"
+msgstr "Layout anwenden"
+
+#: templates/aa_fleet_tool/fleets.html:80
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:102
+msgid "Load MOTD"
+msgstr "MOTD laden"
+
+#: templates/aa_fleet_tool/fleets.html:85
+#: templates/aa_fleet_tool/fleets.html:1000 views/ping.py:60
+msgid "FAT Link"
+msgstr "FAT-Link"
+
+#: templates/aa_fleet_tool/fleets.html:91
+#: templates/aa_fleet_tool/fleets.html:1001 views/ping.py:66
+msgid "SRP Link"
+msgstr "SRP-Link"
+
+#: templates/aa_fleet_tool/fleets.html:102
+msgid "MOTD"
+msgstr "MOTD"
+
+#: templates/aa_fleet_tool/fleets.html:118
+msgid "Edit MOTD directly:"
+msgstr "MOTD direkt bearbeiten:"
+
+#: templates/aa_fleet_tool/fleets.html:122
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:138
+msgid "Set"
+msgstr "Setzen"
+
+#: templates/aa_fleet_tool/fleets.html:154
+#: templates/aa_fleet_tool/fleets.html:396
+msgid "Total"
+msgstr "Gesamt"
+
+#: templates/aa_fleet_tool/fleets.html:160
+#: templates/aa_fleet_tool/fleets.html:998
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:218
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:268
+#: templates/aa_fleet_tool/partials/_member_table.html:12 views/ping.py:51
+msgid "Doctrine"
+msgstr "Doktrin"
+
+#: templates/aa_fleet_tool/fleets.html:162
+msgid "no check"
+msgstr "keine Prüfung"
+
+#: templates/aa_fleet_tool/fleets.html:164
+msgid "Local Doctrines"
+msgstr "Lokale Doktrinen"
+
+#: templates/aa_fleet_tool/fleets.html:173
+msgid "Fittings Doctrines"
+msgstr "Fittings-Doktrinen"
+
+#: templates/aa_fleet_tool/fleets.html:187
+#: templates/aa_fleet_tool/fleets.html:996
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:213
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:263
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:297 views/ping.py:50
+msgid "Fleet Type"
+msgstr "Flottentyp"
+
+#: templates/aa_fleet_tool/fleets.html:189
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:299
+msgid "select type"
+msgstr "Typ wählen"
+
+#: templates/aa_fleet_tool/fleets.html:257
+msgid "Wing/Squad Structure"
+msgstr "Wing/Squad-Struktur"
+
+#: templates/aa_fleet_tool/fleets.html:265
+msgid "Wing (no name)"
+msgstr "Wing (kein Name)"
+
+#: templates/aa_fleet_tool/fleets.html:276
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:56
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:60
+msgid "Squad"
+msgstr "Squad"
+
+#: templates/aa_fleet_tool/fleets.html:284
+msgid "Squad (no name)"
+msgstr "Squad (kein Name)"
+
+#: templates/aa_fleet_tool/fleets.html:304
+msgid "Delete Wing"
+msgstr "Wing löschen"
+
+#: templates/aa_fleet_tool/fleets.html:312
+msgid "Create Wing"
+msgstr "Wing erstellen"
+
+#: templates/aa_fleet_tool/fleets.html:325
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:74
+msgid "Invite Member"
+msgstr "Mitglied einladen"
+
+#: templates/aa_fleet_tool/fleets.html:330
+msgid "Select a fleet from the list."
+msgstr "Wähle eine Flotte aus der Liste."
+
+#: templates/aa_fleet_tool/fleets.html:570
+#: templates/aa_fleet_tool/partials/_member_table.html:26
+msgid "No fleet warp"
+msgstr "Kein Fleet-Warp"
+
+#: templates/aa_fleet_tool/fleets.html:586
+#: templates/aa_fleet_tool/partials/_member_table.html:8
+#: templates/aa_fleet_tool/partials/_member_table.html:23
+msgid "Docked"
+msgstr "Angedockt"
+
+#: templates/aa_fleet_tool/fleets.html:680
+msgid "Kick this member?"
+msgstr "Dieses Mitglied kicken?"
+
+#: templates/aa_fleet_tool/fleets.html:726
+msgid "Invite failed:"
+msgstr "Einladung fehlgeschlagen:"
+
+#: templates/aa_fleet_tool/fleets.html:756
+#: templates/aa_fleet_tool/layouts.html:236
+msgid "Delete wing?"
+msgstr "Wing löschen?"
+
+#: templates/aa_fleet_tool/fleets.html:787
+#: templates/aa_fleet_tool/layouts.html:273
+msgid "Delete squad?"
+msgstr "Squad löschen?"
+
+#: templates/aa_fleet_tool/fleets.html:802
+msgid "Please select a layout."
+msgstr "Bitte ein Layout wählen."
+
+#: templates/aa_fleet_tool/fleets.html:810
+msgid "Done with warnings:"
+msgstr "Mit Warnungen abgeschlossen:"
+
+#: templates/aa_fleet_tool/fleets.html:813
+msgid "Error applying layout"
+msgstr "Fehler beim Anwenden des Layouts"
+
+#: templates/aa_fleet_tool/fleets.html:815
+msgid "Network error"
+msgstr "Netzwerkfehler"
+
+#: templates/aa_fleet_tool/fleets.html:823
+msgid "Fleet name:"
+msgstr "Flottenname:"
+
+#: templates/aa_fleet_tool/fleets.html:855
+#: templates/aa_fleet_tool/fleets.html:934
+msgid "Fleet Type not selected"
+msgstr "Flottentyp nicht ausgewählt"
+
+#: templates/aa_fleet_tool/fleets.html:882
+msgid "Fleet name required"
+msgstr "Flottenname erforderlich"
+
+#: templates/aa_fleet_tool/fleets.html:899
+msgid "ESI FAT Link created!"
+msgstr "ESI-FAT-Link erstellt!"
+
+#: templates/aa_fleet_tool/fleets.html:900
+msgid "Members are being registered automatically. View details:"
+msgstr "Mitglieder werden automatisch registriert. Details ansehen:"
+
+#: templates/aa_fleet_tool/fleets.html:903
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:180
+msgid "FAT Link created!"
+msgstr "FAT-Link erstellt!"
+
+#: templates/aa_fleet_tool/fleets.html:904
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:181
+msgid "Share this link in fleet chat:"
+msgstr "Diesen Link im Fleet-Chat teilen:"
+
+#: templates/aa_fleet_tool/fleets.html:915
+#: templates/aa_fleet_tool/fleets.html:970
+msgid "Close"
+msgstr "Schließen"
+
+#: templates/aa_fleet_tool/fleets.html:917
+msgid "FAT Link error:"
+msgstr "FAT-Link-Fehler:"
+
+#: templates/aa_fleet_tool/fleets.html:924
+#: templates/aa_fleet_tool/fleets.html:979
+msgid "Copied"
+msgstr "Kopiert"
+
+#: templates/aa_fleet_tool/fleets.html:925
+#: templates/aa_fleet_tool/fleets.html:980
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:184
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:252
+msgid "Copy"
+msgstr "Kopieren"
+
+#: templates/aa_fleet_tool/fleets.html:952
+msgid "SRP name required"
+msgstr "SRP-Name erforderlich"
+
+#: templates/aa_fleet_tool/fleets.html:953
+msgid "Doctrine required"
+msgstr "Doktrin erforderlich"
+
+#: templates/aa_fleet_tool/fleets.html:972
+msgid "SRP Link error:"
+msgstr "SRP-Link-Fehler:"
+
+#: templates/aa_fleet_tool/fleets.html:994
+msgid "included"
+msgstr "enthalten"
+
+#: templates/aa_fleet_tool/fleets.html:997
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:306 views/ping.py:49
+msgid "Staging"
+msgstr "Staging"
+
+#: templates/aa_fleet_tool/fleets.html:999 views/ping.py:53
+msgid "Members"
+msgstr "Mitglied"
+
+#: templates/aa_fleet_tool/fleets.html:1003 views/ping.py:71
+msgid "Note"
+msgstr "Notiz"
+
+#: templates/aa_fleet_tool/fleets.html:1023 views/ping.py:31
+msgid "Please select a fleet type."
+msgstr "Bitte ein Layout wählen."
+
+#: templates/aa_fleet_tool/fleets.html:1035
+msgid "Sent"
+msgstr "Gesendet"
+
+#: templates/aa_fleet_tool/fleets.html:1037
+msgid "Ping failed:"
+msgstr "Einladung fehlgeschlagen:"
+
+#: templates/aa_fleet_tool/layouts.html:11
+msgid "New Layout"
+msgstr "Neues Layout"
+
+#: templates/aa_fleet_tool/layouts.html:24
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:47
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:51
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:60
+msgid "Wing"
+msgstr "Wing"
+
+#: templates/aa_fleet_tool/layouts.html:73
+msgid "No squads"
+msgstr "Keine Squads"
+
+#: templates/aa_fleet_tool/layouts.html:77
+msgid "No wings defined yet."
+msgstr "Noch keine Wings definiert."
+
+#: templates/aa_fleet_tool/layouts.html:82
+msgid "No layouts defined yet."
+msgstr "Noch keine Layouts definiert."
+
+#: templates/aa_fleet_tool/layouts.html:92
+msgid "New Fleet Layout"
+msgstr "Neues Flotten-Layout"
+
+#: templates/aa_fleet_tool/layouts.html:97
+msgid "e.g. HAC Fleet"
+msgstr "z. B. HAC-Flotte"
+
+#: templates/aa_fleet_tool/layouts.html:113
+msgid "Add Wing"
+msgstr "Wing hinzufügen"
+
+#: templates/aa_fleet_tool/layouts.html:117
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:8
+msgid "Wing name"
+msgstr "Wing-Name"
+
+#: templates/aa_fleet_tool/layouts.html:118
+msgid "e.g. Alpha Wing"
+msgstr "z. B. Alpha Wing"
+
+#: templates/aa_fleet_tool/layouts.html:130
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:5
+msgid "Rename Wing"
+msgstr "Wing umbenennen"
+
+#: templates/aa_fleet_tool/layouts.html:134
+#: templates/aa_fleet_tool/layouts.html:168
+msgid "New name"
+msgstr "Neuer Name"
+
+#: templates/aa_fleet_tool/layouts.html:140
+#: templates/aa_fleet_tool/layouts.html:174
+#: templates/aa_fleet_tool/motd.html:122
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:12
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:26
+msgid "Save"
+msgstr "Speichern"
+
+#: templates/aa_fleet_tool/layouts.html:147
+msgid "Add Squad"
+msgstr "Squad hinzufügen"
+
+#: templates/aa_fleet_tool/layouts.html:151
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:22
+msgid "Squad name"
+msgstr "Squad-Name"
+
+#: templates/aa_fleet_tool/layouts.html:152
+msgid "e.g. Bravo Squad"
+msgstr "z. B. Bravo Squad"
+
+#: templates/aa_fleet_tool/layouts.html:164
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:19
+msgid "Rename Squad"
+msgstr "Squad umbenennen"
+
+#: templates/aa_fleet_tool/layouts.html:192
+#: templates/aa_fleet_tool/layouts.html:215
+#: templates/aa_fleet_tool/layouts.html:230
+#: templates/aa_fleet_tool/layouts.html:252
+#: templates/aa_fleet_tool/layouts.html:267
+#: templates/aa_fleet_tool/motd.html:150 templates/aa_fleet_tool/motd.html:173
+#: views/doctrines.py:45 views/layouts.py:33 views/motd.py:46 views/motd.py:65
+msgid "Name required"
+msgstr "Name erforderlich"
+
+#: templates/aa_fleet_tool/layouts.html:199
+msgid "Delete this layout?"
+msgstr "Dieses Layout löschen?"
+
+#: templates/aa_fleet_tool/motd.html:10
+msgid "Shared MOTDs"
+msgstr "Geteilte MOTDs"
+
+#: templates/aa_fleet_tool/motd.html:13 templates/aa_fleet_tool/motd.html:46
+msgid "New Template"
+msgstr "Neue Vorlage"
+
+#: templates/aa_fleet_tool/motd.html:37
+msgid "No shared templates yet."
+msgstr "Noch keine geteilten Vorlagen."
+
+#: templates/aa_fleet_tool/motd.html:44
+msgid "My MOTDs"
+msgstr "Meine MOTDs"
+
+#: templates/aa_fleet_tool/motd.html:67
+msgid "You have no private MOTDs yet. Only you can see these."
+msgstr "Du hast noch keine privaten MOTDs. Nur du siehst diese."
+
+#: templates/aa_fleet_tool/motd.html:79
+msgid "New MOTD Template"
+msgstr "Neue MOTD-Vorlage"
+
+#: templates/aa_fleet_tool/motd.html:86
+msgid "e.g. Armor HAC Form-Up"
+msgstr "z. B. Armor HAC Form-Up"
+
+#: templates/aa_fleet_tool/motd.html:89 templates/aa_fleet_tool/motd.html:114
+msgid "Text"
+msgstr "Text"
+
+#: templates/aa_fleet_tool/motd.html:91
+msgid "MOTD text…"
+msgstr "MOTD-Text…"
+
+#: templates/aa_fleet_tool/motd.html:104
+msgid "Edit MOTD Template"
+msgstr "MOTD-Vorlage bearbeiten"
+
+#: templates/aa_fleet_tool/motd.html:117
+msgid "EVE XML format — will be set as MOTD without changes."
+msgstr "EVE-XML-Format — wird unverändert als MOTD gesetzt."
+
+#: templates/aa_fleet_tool/motd.html:133
+msgid "This template is shared with all FCs."
+msgstr "Diese Vorlage wird mit allen FCs geteilt."
+
+#: templates/aa_fleet_tool/motd.html:134
+msgid "This template is private — only you can see it."
+msgstr "Diese Vorlage ist privat — nur du siehst sie."
+
+#: templates/aa_fleet_tool/motd.html:180
+msgid "Delete this template?"
+msgstr "Diese Vorlage löschen?"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:33
+msgid "Move Member"
+msgstr "Mitglied verschieben"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:40
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:85
+msgid "Squad Member"
+msgstr "Squad Member"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:41
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:86
+msgid "Squad Commander"
+msgstr "Squad Commander"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:42
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:87
+msgid "Wing Commander"
+msgstr "Wing Commander"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:43
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:88
+msgid "Fleet Commander"
+msgstr "Fleet Commander"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:49
+msgid "no wing"
+msgstr "kein Wing"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:58
+msgid "no squad"
+msgstr "kein Squad"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:67
+msgid "Move"
+msgstr "Verschieben"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:78
+msgid "Character ID"
+msgstr "Charakter-ID"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:79
+msgid "EVE Character ID"
+msgstr "EVE-Charakter-ID"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:80
+msgid "Note: Character must not have a CSPA charge set."
+msgstr "Hinweis: Der Charakter darf keine CSPA-Gebühr gesetzt haben."
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:94
+msgid "Invite"
+msgstr "Einladen"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:108
+msgid "Select template:"
+msgstr "Vorlage auswählen:"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:122
+msgid "No templates yet. Create some in the <strong>MOTD Library</strong> tab."
+msgstr ""
+"Noch keine Vorlagen. Erstelle welche im Tab <strong>MOTD-Bibliothek</strong>."
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:127
+msgid "Edit MOTD"
+msgstr "MOTD bearbeiten"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:128
+msgid "(changes only affect this instance)"
+msgstr "(Änderungen betreffen nur diese Instanz)"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:131
+msgid "Select a template or type directly…"
+msgstr "Vorlage auswählen oder direkt tippen…"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:150
+msgid ""
+"The selected layout will be applied to your active fleet. Existing wings/"
+"squads will be renamed, missing ones created."
+msgstr ""
+"Das gewählte Layout wird auf deine aktive Flotte angewendet. Bestehende "
+"Wings/Squads werden umbenannt, fehlende erstellt."
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:152
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:154
+msgid "Select layout"
+msgstr "Layout wählen"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:166
+msgid "Apply"
+msgstr "Anwenden"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:175
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:231
+msgid "Create FAT Link"
+msgstr "FAT-Link erstellen"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:190
+msgid "Link Type"
+msgstr "Link-Typ"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:195
+msgid "Clickable"
+msgstr "Anklickbar"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:196
+msgid "Members click the link to register"
+msgstr "Mitglieder klicken den Link zum Registrieren"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:202
+msgid "ESI"
+msgstr "ESI"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:203
+msgid "Auto-registers current fleet members"
+msgstr "Registriert aktuelle Flottenmitglieder automatisch"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:209
+msgid "Fleet Name"
+msgstr "Flottenname"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:210
+msgid "e.g. HAC Roam"
+msgstr "z. B. HAC Roam"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:219
+msgid "optional"
+msgstr "optional"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:222
+msgid "Duration (minutes)"
+msgstr "Dauer (Minuten)"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:222
+msgid "clickable links only"
+msgstr "nur anklickbare Links"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:243
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:280
+msgid "Create SRP Link"
+msgstr "SRP-Link erstellen"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:248
+msgid "SRP Link created!"
+msgstr "SRP-Link erstellt!"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:249
+msgid "Share this link with fleet members:"
+msgstr "Diesen Link mit den Flottenmitgliedern teilen:"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:257
+msgid "SRP Name"
+msgstr "SRP-Name"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:259
+msgid "e.g. HAC Roam SRP"
+msgstr "z. B. HAC Roam SRP"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:269
+msgid "e.g. HAC Doctrine"
+msgstr "z. B. HAC-Doktrin"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:272
+msgid "AAR Link (optional)"
+msgstr "AAR-Link (optional)"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:308
+msgid "no staging"
+msgstr "kein Staging"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:316
+msgid "Note (optional)"
+msgstr "optional"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:318
+msgid "e.g. Undock in 5 min, bring scouts"
+msgstr "z. B. Undock in 5 Min, Scouts mitbringen"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:320
+msgid "Preview"
+msgstr "Vorschau"
+
+#: templates/aa_fleet_tool/partials/_fleet_modals.html:326
+msgid "Send Ping"
+msgstr "Ping senden"
+
+#: templates/aa_fleet_tool/partials/_member_table.html:7
+msgid "System"
+msgstr "System"
+
+#: templates/aa_fleet_tool/partials/_member_table.html:10
+msgid "Wing / Squad"
+msgstr "Wing / Squad"
+
+#: templates/aa_fleet_tool/partials/_member_table.html:11
+msgid "Warp"
+msgstr "Warp"
+
+#: templates/aa_fleet_tool/partials/_member_table.html:13
+msgid "Join (UTC)"
+msgstr "Beitritt (UTC)"
+
+#: views/commanders.py:36
+msgid "Character not found in Auth."
+msgstr "Charakter nicht in Auth gefunden."
+
+#: views/commanders.py:42
+msgid "That character is not registered to your account."
+msgstr "Dieser Charakter ist nicht deinem Account zugeordnet."
+
+#: views/commanders.py:53
+#, python-format
+msgid "%s registered as FC. Press “Fleet Start” when you form a fleet."
+msgstr ""
+"%s als FC registriert. Drücke „Fleet Start“, wenn du eine Flotte aufmachst."
+
+#: views/commanders.py:58
+#, python-format
+msgid "%s is already registered."
+msgstr "%s ist bereits registriert."
+
+#: views/doctrines.py:70
+msgid "Ship Type ID and Ship Name are required."
+msgstr "Ship Type ID und Ship Name sind Pflichtfelder."
+
+#: views/fleets.py:256 views/fleets.py:268 views/fleets.py:288
+#: views/fleets.py:308 views/fleets.py:327 views/fleets.py:353
+#: views/fleets.py:379 views/fleets.py:396 views/fleets.py:415
+#: views/fleets.py:433 views/fleets.py:450 views/fleets.py:469 views/motd.py:49
+#: views/motd.py:62 views/motd.py:78 views/ping.py:25
+msgid "Not authorized"
+msgstr "Nicht autorisiert"
+
+#: views/layouts.py:123
+msgid "Not authorized or no write token"
+msgstr "Nicht autorisiert oder kein Write-Token"
+
+#: views/layouts.py:128
+msgid "Layout has no wings defined"
+msgstr "Layout hat keine Wings definiert"
+
+#: views/layouts.py:154
+#, python-format
+msgid "Wing '%s' could not be created"
+msgstr "Wing „%s“ konnte nicht erstellt werden"
+
+#: views/layouts.py:177
+#, python-format
+msgid "Squad '%s' could not be created"
+msgstr "Squad „%s“ konnte nicht erstellt werden"
+
+#: views/ping.py:34
+msgid "This fleet type has no Discord webhook configured."
+msgstr "Für diesen Fleet Type ist kein Discord-Webhook konfiguriert."
+
+#: views/ping.py:48
+msgid "FC"
+msgstr "FC"
+
+#: views/ping.py:75
+msgid "Fleet forming up — join now!"
+msgstr "Flotte formiert sich — jetzt beitreten!"
+
+#: views/ping.py:79
+#, python-format
+msgid "%(type)s forming up!"
+msgstr "%(type)s formiert sich!"
+
+#~ msgid "Create the first template using the button above."
+#~ msgstr "Erstelle die erste Vorlage über den Button oben."
+
+#~ msgid "Offline"
+#~ msgstr "Offline"
+
+#, python-format
+#~ msgid "%s registered as FC. Sync running…"
+#~ msgstr "%s als FC registriert. Sync läuft…"

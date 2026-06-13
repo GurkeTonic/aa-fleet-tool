@@ -1,0 +1,79 @@
+{% extends "allianceauth/base-bs5.html" %}
+{% load i18n %}
+
+{% block extra_css %}
+{% include "bundles/datatables-2-css-bs5.html" %}
+{% endblock %}
+
+{% block page_title %}{% translate "Fleet Tool" %}{% endblock %}
+
+{% block header_nav_brand %}{% translate "Fleet Tool" %}{% endblock %}
+
+{% block header_nav_collapse_left %}
+<li class="nav-item">
+  <a class="nav-link {% if active_page == 'fleets' %}active{% endif %}" href="{% url 'aa_fleet_tool:index' %}">
+    {% translate "Active Fleets" %}
+    {% if nav_fleet_count %}<span class="badge bg-success ms-1">{{ nav_fleet_count }}</span>{% endif %}
+  </a>
+</li>
+<li class="nav-item">
+  <a class="nav-link {% if active_page == 'commanders' %}active{% endif %}" href="{% url 'aa_fleet_tool:commanders' %}">
+    {% translate "Fleet Commanders" %} <span class="badge bg-secondary ms-1">{{ nav_fc_count }}</span>
+  </a>
+</li>
+<li class="nav-item">
+  <a class="nav-link {% if active_page == 'doctrines' %}active{% endif %}" href="{% url 'aa_fleet_tool:doctrines' %}">
+    {% translate "Doctrines" %}
+  </a>
+</li>
+<li class="nav-item">
+  <a class="nav-link {% if active_page == 'layouts' %}active{% endif %}" href="{% url 'aa_fleet_tool:layouts' %}">
+    {% translate "Fleet Layouts" %} <span class="badge bg-secondary ms-1">{{ nav_layout_count }}</span>
+  </a>
+</li>
+<li class="nav-item">
+  <a class="nav-link {% if active_page == 'motd' %}active{% endif %}" href="{% url 'aa_fleet_tool:motd' %}">
+    {% translate "MOTD Library" %} <span class="badge bg-secondary ms-1">{{ nav_motd_count }}</span>
+  </a>
+</li>
+{% endblock %}
+
+{% block header_nav_collapse_right %}{% block page_nav_right %}{% endblock %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  {% if messages %}
+  <div class="mt-2">
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="mt-3">
+    {% block page_content %}{% endblock %}
+  </div>
+</div>
+{% block page_modals %}{% endblock %}
+{% endblock %}
+
+{% block extra_javascript %}
+{% include "bundles/datatables-2-js-bs5.html" %}
+<script>
+  // Shared CSRF + POST helper for all Fleet Tool pages
+  const FT_CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? "";
+  function ftPost(url, data) {
+    const fd = new FormData();
+    fd.append("csrfmiddlewaretoken", FT_CSRF);
+    for (const [k, v] of Object.entries(data || {})) fd.append(k, v);
+    return fetch(url, { method: "POST", body: fd })
+      .then(r => r.json())
+      .catch(err => { console.error("POST failed:", url, err); return { ok: false, error: "{% translate 'Server error – see console.' %}" }; });
+  }
+  function ftReload() { window.location.reload(); }
+</script>
+{% block page_javascript %}{% endblock %}
+{% endblock %}

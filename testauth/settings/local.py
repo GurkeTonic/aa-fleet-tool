@@ -16,6 +16,18 @@ STATICFILES_DIRS = [
     f"{PACKAGE}/static",
 ]
 
+# AA ships AaManifestStaticFilesStorage, which requires a built staticfiles
+# manifest. Tests that render AA templates would otherwise fail with
+# "Missing staticfiles manifest entry". Fall back to the plain storage in tests.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
 SITE_URL = "http://localhost:8000"
 CSRF_TRUSTED_ORIGINS = [SITE_URL]
 

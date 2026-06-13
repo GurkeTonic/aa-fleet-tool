@@ -47,7 +47,6 @@ tests-allianceauth-latest = [
     "allianceauth>=5",
     "coverage",
     "factory-boy",
-    "requests",
 ]
 
 [project.entry-points."allianceauth.app"]

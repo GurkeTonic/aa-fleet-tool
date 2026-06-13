@@ -1,125 +1,72 @@
 """App Tasks"""
 
-# Standard Library
-from email.utils import parsedate_to_datetime
-
 # Third Party
-import requests
 from celery import shared_task
 
 # Django
-from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
 # Alliance Auth
 from allianceauth.services.hooks import get_extension_logger
+from allianceauth.services.tasks import QueueOnce
+
+# Alliance Auth (External Libs)
+from esi.exceptions import (
+    ESIBucketLimitException,
+    ESIErrorLimitException,
+    HTTPClientError,
+    HTTPNotModified,
+    HTTPServerError,
+)
 
 # AA Fleet Tool
-from aa_fleet_tool import (
-    __app_name_useragent__,
-    __esi_compatibility_date__,
-    __github_url__,
-    __version__,
-)
+from aa_fleet_tool.app_settings import FLEET_TOOL_ACTIVATION_GRACE
+from aa_fleet_tool.constants import READ_SCOPE
+from aa_fleet_tool.providers import esi, get_token
 
 logger = get_extension_logger(__name__)
 
-ESI_BASE = "https://esi.evetech.net"
-_ESI_COMPAT_DATE = __esi_compatibility_date__
+# Exceptions worth a retry — the error/bucket limits and transient ESI 5xx.
+ESI_RETRY_EXCEPTIONS = (ESIErrorLimitException, ESIBucketLimitException, HTTPServerError)
 
-READ_SCOPE = "esi-fleets.read_fleet.v1"
-
-
-def _get_user_agent() -> str:
-    email = getattr(settings, "ESI_USER_CONTACT_EMAIL", "unknown@example.com")
-    return f"{__app_name_useragent__}/{__version__} ({email}; +{__github_url__})"
+NAME_CACHE_TTL = 3600
 
 
-def _base_headers() -> dict:
-    return {
-        "User-Agent": _get_user_agent(),
-        "X-Compatibility-Date": _ESI_COMPAT_DATE,
-        "Accept": "application/json",
-    }
+def _auto_stop(fc, had_fleet: bool) -> None:
+    """Deactivate an FC that is no longer fleeting.
+
+    ``had_fleet`` True means a fleet was just running and ended → stop now.
+    Otherwise only stop once the activation grace period has elapsed (the FC
+    clicked "Fleet Start" but never actually opened a fleet in game).
+    """
+    if had_fleet:
+        fc.stop()
+    elif fc.activated_at and (
+        timezone.now() - fc.activated_at
+    ).total_seconds() > FLEET_TOOL_ACTIVATION_GRACE:
+        fc.stop()
 
 
-def _auth_headers(access_token: str) -> dict:
-    return {**_base_headers(), "Authorization": f"Bearer {access_token}"}
+def _resolve_sde_names(model_name: str, ids: set[int]) -> dict[int, str]:
+    """Resolve static IDs (ship types, solar systems) to names from the local SDE.
 
-
-def _handle_esi_response(resp: requests.Response) -> None:
-    """Check ESI error-limit headers and raise on exhaustion or HTTP errors."""
-    remain = int(resp.headers.get("X-ESI-Error-Limit-Remain", 100))
-    if remain <= 0:
-        reset = resp.headers.get("X-ESI-Error-Limit-Reset", "?")
-        logger.error("ESI error limit exhausted, resets in %ss — aborting task", reset)
-        resp.raise_for_status()
-    if remain < 10:
-        logger.warning(
-            "ESI error limit critical: %d remaining, resets in %ss",
-            remain,
-            resp.headers.get("X-ESI-Error-Limit-Reset", "?"),
-        )
-    if resp.status_code == 429:
-        logger.warning(
-            "ESI rate limited (429), retry after %ss",
-            resp.headers.get("Retry-After", "?"),
-        )
-    resp.raise_for_status()
-
-
-def _cache_ttl_from_expires(headers: dict) -> int:
-    expires = headers.get("Expires")
-    if expires:
-        try:
-            exp_dt = parsedate_to_datetime(expires)
-            ttl = int(exp_dt.timestamp() - timezone.now().timestamp())
-            return max(30, ttl)
-        except Exception:
-            pass
-    return 60
-
-
-def _get_token(character_id: int, scope: str):
-    from esi.models import Token
-
-    return (
-        Token.objects.filter(character_id=character_id)
-        .require_valid()
-        .filter(scopes__name=scope)
-        .first()
-    )
-
-
-def _esi_get(url: str, access_token: str, cache_key: str = "", timeout: int = 30):
-    """Authenticated ESI GET with caching and error-limit handling."""
-    if cache_key:
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return cached
-
+    Static data never changes, so this avoids hitting ESI /universe/names for it
+    entirely — only dynamic entities (characters) still need an ESI call.
+    """
+    if not ids:
+        return {}
     try:
-        resp = requests.get(url, headers=_auth_headers(access_token), timeout=timeout)
-    except requests.RequestException as exc:
-        logger.warning("ESI GET %s failed: %s", url, exc)
-        return None
-
-    try:
-        _handle_esi_response(resp)
-    except requests.HTTPError:
-        if resp.status_code == 404:
-            return resp
-        return None
-
-    if resp.status_code == 200 and cache_key:
-        ttl = _cache_ttl_from_expires(resp.headers)
-        cache.set(cache_key, resp, ttl)
-
-    return resp
+        from eve_sde import models as sde
+        model = getattr(sde, model_name)
+        return dict(model.objects.filter(id__in=ids).values_list("id", "name"))
+    except Exception as exc:  # SDE not installed/loaded → caller falls back to placeholders
+        logger.warning("SDE name lookup (%s) failed: %s", model_name, exc)
+        return {}
 
 
-def _resolve_names_bulk(ids: list[int]) -> dict[int, str]:
+def _resolve_character_names(ids: list[int]) -> dict[int, str]:
+    """Resolve character ids to names via ESI /universe/names, cached per id."""
     if not ids:
         return {}
 
@@ -138,46 +85,53 @@ def _resolve_names_bulk(ids: list[int]) -> dict[int, str]:
     chunks = [unknown[i:i + 1000] for i in range(0, len(unknown), 1000)]
     for chunk in chunks:
         try:
-            resp = requests.post(
-                f"{ESI_BASE}/v3/universe/names/",
-                json=chunk,
-                headers=_base_headers(),
-                timeout=30,
-            )
-            if resp.status_code != 200:
-                logger.warning("Name resolution returned %s", resp.status_code)
-                continue
-            for item in resp.json():
-                name = item["name"]
-                uid = item["id"]
-                result[uid] = name
-                cache.set(f"fleet_tool_name_{uid}", name, 3600)
-        except requests.RequestException as exc:
-            logger.warning("Name resolution failed: %s", exc)
+            names = esi.client.Universe.PostUniverseNames(body=chunk).result()
+        except (HTTPClientError, HTTPServerError) as exc:
+            logger.warning("Character name resolution failed: %s", exc)
+            continue
+        for item in names:
+            result[item.id] = item.name
+            cache.set(f"fleet_tool_name_{item.id}", item.name, NAME_CACHE_TTL)
 
     return result
 
 
-@shared_task
+@shared_task(base=QueueOnce, once={"graceful": True})
 def check_all_fc_status():
-    """Runs every 60s — checks if each FC is in a fleet; updates or clears ActiveFleet."""
+    """Runs every 60s — checks active FCs for a fleet; updates or clears ActiveFleet.
+
+    Only FCs that pressed "Fleet Start" (``is_active``) are polled, so registering
+    an FC does not cause permanent ESI polling.
+    """
     from .models import FleetCommander
 
-    for fc in FleetCommander.objects.select_related("character"):
-        _check_fc_in_fleet.delay(fc.pk)
+    for fc_pk in FleetCommander.objects.filter(is_active=True).values_list("pk", flat=True):
+        check_fc_in_fleet.delay(fc_pk)
 
 
-@shared_task
+@shared_task(base=QueueOnce, once={"graceful": True})
 def update_all_active_fleets():
     """Runs every 30s — updates members/wings for all known active fleets."""
     from .models import ActiveFleet
 
-    for af in ActiveFleet.objects.select_related("fc__character"):
-        _update_fleet_members.delay(af.fc.pk)
+    for fc_pk in ActiveFleet.objects.filter(fc__is_active=True).values_list("fc_id", flat=True):
+        update_fleet_members.delay(fc_pk)
 
 
-@shared_task
-def _check_fc_in_fleet(fc_pk: int):
+@shared_task(
+    base=QueueOnce,
+    once={"graceful": True},
+    autoretry_for=ESI_RETRY_EXCEPTIONS,
+    retry_backoff=True,
+    max_retries=3,
+)
+def check_fc_in_fleet(fc_pk: int, force: bool = False):
+    """Check whether the FC is in a fleet and rebuild the ActiveFleet.
+
+    ``force`` bypasses the ESI cache/ETag — needed when (re)activating, because
+    a 304 Not-Modified would otherwise leave us unable to recreate an ActiveFleet
+    that was deleted on Stop while the FC never actually left the in-game fleet.
+    """
     from .models import ActiveFleet, FleetCommander
 
     try:
@@ -186,59 +140,91 @@ def _check_fc_in_fleet(fc_pk: int):
         return
 
     char_id = fc.character.character_id
-    token = _get_token(char_id, READ_SCOPE)
+    token = get_token(char_id, READ_SCOPE)
     if not token:
         logger.debug("No valid token for FC %s", fc)
         return
 
-    access_token = token.valid_access_token()
-    cache_key = f"fleet_tool_fc_status_{char_id}"
-    resp = _esi_get(
-        f"{ESI_BASE}/v1/characters/{char_id}/fleet",
-        access_token,
-        cache_key=cache_key,
-    )
-    if resp is None:
+    try:
+        fleet_info = esi.client.Fleets.GetCharactersCharacterIdFleet(
+            character_id=char_id, token=token
+        ).result(force_refresh=force)
+    except HTTPNotModified:
+        # Unchanged since last fetch. Normally just refresh members — but if the
+        # ActiveFleet is gone (FC stopped, then restarted the *same* fleet), the
+        # ETag keeps returning 304, so force a fresh fetch to rebuild it.
+        if ActiveFleet.objects.filter(fc=fc).exists():
+            update_fleet_members.delay(fc_pk)
+        elif not force:
+            check_fc_in_fleet(fc_pk, force=True)
+        return
+    except HTTPClientError as exc:
+        if exc.status_code == 404:
+            # Character is not in a fleet — drop any stale ActiveFleet and
+            # deactivate the FC (fleet ended, or never formed within grace).
+            had_fleet = ActiveFleet.objects.filter(fc=fc).exists()
+            ActiveFleet.objects.filter(fc=fc).delete()
+            _auto_stop(fc, had_fleet)
+        else:
+            logger.warning("Fleet status check failed for %s: %s", fc, exc)
         return
 
-    if resp.status_code == 404:
-        cache.delete(cache_key)
-        ActiveFleet.objects.filter(fc=fc).delete()
+    fleet_id = fleet_info.fleet_id
+
+    motd = ""
+    is_free_move = is_registered = is_voice_enabled = False
+    try:
+        fleet_data = esi.client.Fleets.GetFleetsFleetId(
+            fleet_id=fleet_id, token=token
+        ).result(force_refresh=force)
+        motd = fleet_data.motd or ""
+        is_free_move = fleet_data.is_free_move
+        is_registered = fleet_data.is_registered
+        is_voice_enabled = fleet_data.is_voice_enabled
+    except HTTPNotModified:
+        # Fleet settings unchanged — keep whatever we already stored.
+        existing = ActiveFleet.objects.filter(fc=fc).first()
+        if existing:
+            motd = existing.motd
+            is_free_move = existing.is_free_move
+            is_registered = existing.is_registered
+            is_voice_enabled = existing.is_voice_enabled
+    except HTTPClientError as exc:
+        if exc.status_code == 404:
+            ActiveFleet.objects.filter(fc=fc).delete()
+            return
+        logger.warning("Fleet detail fetch failed for %s: %s", fc, exc)
         return
 
-    if resp.status_code != 200:
-        logger.warning("Fleet status check failed for %s: %s", fc, resp.status_code)
-        return
-
-    data = resp.json()
-    fleet_id = data["fleet_id"]
-
-    fleet_resp = _esi_get(
-        f"{ESI_BASE}/v1/fleets/{fleet_id}",
-        access_token,
-        cache_key=f"fleet_tool_fleet_{fleet_id}",
-    )
-    if fleet_resp is None or fleet_resp.status_code != 200:
-        return
-
-    fleet_data = fleet_resp.json()
     ActiveFleet.objects.update_or_create(
         fc=fc,
         defaults={
             "fleet_id": fleet_id,
-            "motd": fleet_data.get("motd", ""),
-            "is_free_move": fleet_data.get("is_free_move", False),
-            "is_registered": fleet_data.get("is_registered", False),
-            "is_voice_enabled": fleet_data.get("is_voice_enabled", False),
+            "motd": motd,
+            "is_free_move": is_free_move,
+            "is_registered": is_registered,
+            "is_voice_enabled": is_voice_enabled,
             "last_updated": timezone.now(),
         },
     )
 
-    _update_fleet_members.delay(fc_pk)
+    update_fleet_members.delay(fc_pk, force=force)
 
 
-@shared_task
-def _update_fleet_members(fc_pk: int):
+@shared_task(
+    base=QueueOnce,
+    once={"graceful": True},
+    autoretry_for=ESI_RETRY_EXCEPTIONS,
+    retry_backoff=True,
+    max_retries=3,
+)
+def update_fleet_members(fc_pk: int, force: bool = False):
+    """Rebuild the member/wing rows from ESI.
+
+    ``force`` bypasses the ESI cache/ETag — required after a stop/start of the
+    same fleet, where a 304 Not-Modified would otherwise leave the (cascade-
+    deleted) member list empty.
+    """
     from .models import ActiveFleet, FleetCommander, FleetMember, FleetSquad, FleetWing
 
     try:
@@ -248,82 +234,128 @@ def _update_fleet_members(fc_pk: int):
         return
 
     char_id = fc.character.character_id
-    token = _get_token(char_id, READ_SCOPE)
+    token = get_token(char_id, READ_SCOPE)
     if not token:
         return
 
-    access_token = token.valid_access_token()
     fleet_id = fleet.fleet_id
 
     # Members
-    resp = _esi_get(
-        f"{ESI_BASE}/v1/fleets/{fleet_id}/members",
-        access_token,
-        cache_key=f"fleet_tool_members_{char_id}_{fleet_id}",
-    )
-    if resp is not None and resp.status_code == 404:
-        fleet.delete()
+    try:
+        members_raw = esi.client.Fleets.GetFleetsFleetIdMembers(
+            fleet_id=fleet_id, token=token
+        ).result(force_refresh=force)
+    except HTTPNotModified:
+        # Unchanged — normally keep the stored rows. But if we have none (the
+        # fleet was just recreated after a stop/start), the ETag would keep
+        # returning 304, so force a fresh fetch to repopulate.
+        if not force and not fleet.members.exists():
+            update_fleet_members(fc_pk, force=True)
+            return
+        members_raw = None
+    except HTTPClientError as exc:
+        if exc.status_code == 404:
+            # Fleet vanished — remove it and deactivate the FC.
+            fleet.delete()
+            _auto_stop(fc, had_fleet=True)
         return
-    if resp is not None and resp.status_code == 200:
-        members_raw = resp.json()
 
-        all_ids = set()
-        for m in members_raw:
-            all_ids.add(m["character_id"])
-            all_ids.add(m["ship_type_id"])
-            all_ids.add(m["solar_system_id"])
-
-        names = _resolve_names_bulk(list(all_ids))
+    if members_raw is not None:
+        # Static IDs (ships, systems) come from the local SDE; only character
+        # names — which the SDE does not hold — are resolved via ESI.
+        char_names = _resolve_character_names(list({m.character_id for m in members_raw}))
+        ship_names = _resolve_sde_names("ItemType", {m.ship_type_id for m in members_raw})
+        system_names = _resolve_sde_names("SolarSystem", {m.solar_system_id for m in members_raw})
 
         fleet.members.all().delete()
         new_members = [
             FleetMember(
                 fleet=fleet,
-                character_id=m["character_id"],
-                character_name=names.get(m["character_id"], f"Unknown #{m['character_id']}"),
-                ship_type_id=m["ship_type_id"],
-                ship_name=names.get(m["ship_type_id"], f"Unknown Ship #{m['ship_type_id']}"),
-                solar_system_id=m["solar_system_id"],
-                system_name=names.get(m["solar_system_id"], f"Unknown System #{m['solar_system_id']}"),
-                role=m["role"],
-                role_name=m.get("role_name", ""),
-                wing_id=m.get("wing_id"),
-                squad_id=m.get("squad_id"),
-                join_time=m.get("join_time"),
-                takes_fleet_warp=m.get("takes_fleet_warp", True),
-                station_id=m.get("station_id"),
+                character_id=m.character_id,
+                character_name=char_names.get(m.character_id, f"Unknown #{m.character_id}"),
+                ship_type_id=m.ship_type_id,
+                ship_name=ship_names.get(m.ship_type_id, f"Unknown Ship #{m.ship_type_id}"),
+                solar_system_id=m.solar_system_id,
+                system_name=system_names.get(m.solar_system_id, f"Unknown System #{m.solar_system_id}"),
+                role=m.role,
+                role_name=getattr(m, "role_name", "") or "",
+                wing_id=getattr(m, "wing_id", None),
+                squad_id=getattr(m, "squad_id", None),
+                join_time=getattr(m, "join_time", None),
+                takes_fleet_warp=getattr(m, "takes_fleet_warp", True),
+                station_id=getattr(m, "station_id", None),
             )
             for m in members_raw
         ]
         FleetMember.objects.bulk_create(new_members, ignore_conflicts=True)
 
     # Wings + Squads
-    resp_w = _esi_get(
-        f"{ESI_BASE}/v1/fleets/{fleet_id}/wings",
-        access_token,
-        cache_key=f"fleet_tool_wings_{char_id}_{fleet_id}",
-    )
-    if resp_w is not None and resp_w.status_code == 200:
-        wings_raw = resp_w.json()
+    try:
+        wings_raw = esi.client.Fleets.GetFleetsFleetIdWings(
+            fleet_id=fleet_id, token=token
+        ).result(force_refresh=force)
+    except HTTPNotModified:
+        wings_raw = None
+    except HTTPClientError:
+        wings_raw = None
+
+    if wings_raw is not None:
         fleet.wings.all().delete()
         for w in wings_raw:
             wing = FleetWing.objects.create(
                 fleet=fleet,
-                wing_id=w["id"],
-                name=w.get("name", ""),
+                wing_id=w.id,
+                name=w.name or "",
             )
-            for s in w.get("squads", []):
+            for s in getattr(w, "squads", None) or []:
                 FleetSquad.objects.create(
                     wing=wing,
-                    squad_id=s["id"],
-                    name=s.get("name", ""),
+                    squad_id=s.id,
+                    name=s.name or "",
                 )
 
     fleet.last_updated = timezone.now()
     fleet.save(update_fields=["last_updated"])
 
+    _write_snapshot(fleet)
+
+
+def _write_snapshot(fleet) -> None:
+    """Capture the current composition for the live graph.
+
+    Throttled to ≥20 s apart, and a rolling window: snapshots older than
+    ``FLEET_TOOL_SNAPSHOT_WINDOW`` (default 10 min) are pruned so the graph stays
+    a short live window and the table doesn't grow unbounded.
+    """
+    from datetime import timedelta
+
+    from .app_settings import FLEET_TOOL_SNAPSHOT_WINDOW
+    from .composition import composition_counts
+    from .models import FleetSnapshot
+
+    now = timezone.now()
+    last = fleet.snapshots.order_by("-timestamp").first()
+    if last and (now - last.timestamp).total_seconds() < 20:
+        return  # avoid double snapshots when check_fc_in_fleet re-triggers an update
+
+    ship_ids = list(fleet.members.values_list("ship_type_id", flat=True))
+    comp = composition_counts(ship_ids)
+    FleetSnapshot.objects.create(
+        fleet=fleet,
+        timestamp=now,
+        total=len(ship_ids),
+        dps=comp["dps"]["count"],
+        logi=comp["logi"]["count"],
+        booster=comp["booster"]["count"],
+        ewar=comp["ewar"]["count"],
+        other=comp["other"]["count"],
+    )
+
+    cutoff = now - timedelta(seconds=FLEET_TOOL_SNAPSHOT_WINDOW)
+    fleet.snapshots.filter(timestamp__lt=cutoff).delete()
+
 
 @shared_task
 def sync_fc(fc_pk: int):
-    """Manual trigger: full refresh for one FC."""
-    _check_fc_in_fleet(fc_pk)
+    """Manual trigger: full (cache-bypassing) refresh for one FC."""
+    check_fc_in_fleet(fc_pk, force=True)

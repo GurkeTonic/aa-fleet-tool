@@ -1,0 +1,36 @@
+{% load i18n %}
+          <table id="tbl-members" class="table table-sm table-striped table-hover" style="width:100%">
+            <thead>
+              <tr>
+                <th>{% translate "Character" %}</th>
+                <th>{% translate "Ship" %}</th>
+                <th>{% translate "System" %}</th>
+                <th>{% translate "Docked" %}</th>
+                <th>{% translate "Role" %}</th>
+                <th>{% translate "Wing / Squad" %}</th>
+                <th>{% translate "Warp" %}</th>
+                <th>{% translate "Doctrine" %}</th>
+                <th>{% translate "Join (UTC)" %}</th>
+                {% if is_my_fleet %}<th></th>{% endif %}
+              </tr>
+            </thead>
+            <tbody id="member-tbody">
+              {% for m in selected_fleet_members %}
+              <tr>
+                <td>{{ m.character_name }}</td>
+                <td>{{ m.ship_name }}</td>
+                <td>{{ m.system_name }}</td>
+                <td>{% if m.station_id %}<span class="badge bg-secondary" title="Station ID: {{ m.station_id }}"><i class="fas fa-anchor me-1"></i>{% translate "Docked" %}</span>{% endif %}</td>
+                <td><span class="badge bg-{{ m.role_badge_color }}">{{ m.role_short }}</span></td>
+                <td><small class="text-muted">{% for wd in wings_data %}{% if wd.wing.wing_id == m.wing_id %}{{ wd.wing.name }}{% for sq in wd.squads %}{% if sq.squad.squad_id == m.squad_id %} / {{ sq.squad.name }}{% endif %}{% endfor %}{% endif %}{% endfor %}</small></td>
+                <td>{% if m.takes_fleet_warp %}<span class="text-muted small"><i class="fas fa-check"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{% translate "No fleet warp" %}"><i class="fas fa-ban"></i></span>{% endif %}</td>
+                <td>{% if selected_doctrine_pk %}{% if m.character_id in on_doctrine_chars %}<span class="badge bg-success"><i class="fas fa-check"></i></span>{% else %}<span class="badge bg-danger"><i class="fas fa-times"></i></span>{% endif %}{% endif %}</td>
+                <td><small class="text-muted">{% if m.join_time %}{{ m.join_time|date:"H:i" }}{% endif %}</small></td>
+                {% if is_my_fleet %}<td class="text-end text-nowrap">
+                  <button class="btn btn-sm btn-outline-warning btn-move-member me-1" data-fleet="{{ selected_fleet.pk }}" data-char="{{ m.character_id }}" data-charname="{{ m.character_name }}"><i class="fas fa-arrows-alt"></i></button>
+                  <button class="btn btn-sm btn-outline-danger btn-kick-member" data-fleet="{{ selected_fleet.pk }}" data-char="{{ m.character_id }}" data-charname="{{ m.character_name }}"><i class="fas fa-times"></i></button>
+                </td>{% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>

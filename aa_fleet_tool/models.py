@@ -1,6 +1,10 @@
+"""Data models for the Fleet Tool."""
+
+# Django
 from django.contrib.auth.models import User
 from django.db import models
 
+# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 
@@ -19,12 +23,27 @@ class FleetCommander(models.Model):
     character = models.OneToOneField(
         EveCharacter, on_delete=models.CASCADE, related_name="fleet_commander"
     )
+    # Only active FCs are polled. The FC turns this on via "Fleet Start"; it is
+    # turned off again on "Fleet Stop" or automatically when the fleet ends.
+    is_active = models.BooleanField(default=False)
+    activated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["character__character_name"]
 
     def __str__(self):
         return self.character.character_name
+
+    def start(self):
+        from django.utils import timezone
+        self.is_active = True
+        self.activated_at = timezone.now()
+        self.save(update_fields=["is_active", "activated_at"])
+
+    def stop(self):
+        self.is_active = False
+        self.activated_at = None
+        self.save(update_fields=["is_active", "activated_at"])
 
 
 class ActiveFleet(models.Model):
@@ -36,6 +55,9 @@ class ActiveFleet(models.Model):
     is_registered = models.BooleanField(default=False)
     is_voice_enabled = models.BooleanField(default=False)
     last_updated = models.DateTimeField(null=True, blank=True)
+    # Links created via the FAT/SRP buttons, kept so the Fleet Ping can include them.
+    fat_link_hash = models.CharField(max_length=64, blank=True, default="")
+    srp_link_code = models.CharField(max_length=64, blank=True, default="")
 
     def __str__(self):
         return f"Fleet {self.fleet_id} ({self.fc})"
@@ -43,6 +65,29 @@ class ActiveFleet(models.Model):
     @property
     def member_count(self):
         return self.members.count()
+
+
+class FleetSnapshot(models.Model):
+    """Composition counts captured at each member sync — feeds the live graph.
+
+    Tied to the ActiveFleet (CASCADE), so snapshots are removed automatically
+    when the fleet ends.
+    """
+
+    fleet = models.ForeignKey(ActiveFleet, on_delete=models.CASCADE, related_name="snapshots")
+    timestamp = models.DateTimeField()
+    total = models.PositiveIntegerField(default=0)
+    dps = models.PositiveIntegerField(default=0)
+    logi = models.PositiveIntegerField(default=0)
+    booster = models.PositiveIntegerField(default=0)
+    ewar = models.PositiveIntegerField(default=0)
+    other = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["timestamp"]
+
+    def __str__(self):
+        return f"Snapshot {self.fleet_id} @ {self.timestamp:%H:%M:%S}"
 
 
 class FleetWing(models.Model):
@@ -160,6 +205,10 @@ class DoctrineShip(models.Model):
 class MOTDTemplate(models.Model):
     name = models.CharField(max_length=100)
     text = models.TextField()
+    # Public templates form the shared library (managed via manage_doctrine).
+    # Private templates (is_public=False) belong to and are only visible to their
+    # creator.
+    is_public = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="motd_templates"
     )
@@ -236,3 +285,64 @@ class FleetToolConfiguration(models.Model):
     def get_config(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class Webhook(models.Model):
+    """A reusable Discord webhook a FleetType can post Fleet Pings to."""
+
+    name = models.CharField(max_length=100)
+    url = models.URLField(max_length=500, help_text="Discord webhook URL.")
+    is_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class FleetType(models.Model):
+    """A fleet type the FC selects — also the Discord ping target.
+
+    The ``name`` is reused for the afat/aasrp categorisation when FAT/SRP links
+    are created; the linked ``webhooks`` + ``mention`` drive the Fleet Ping.
+    """
+
+    MENTION_CHOICES = [
+        ("", "None"),
+        ("here", "@here"),
+        ("everyone", "@everyone"),
+    ]
+
+    name = models.CharField(max_length=100, unique=True)
+    webhooks = models.ManyToManyField(
+        Webhook, blank=True, related_name="fleet_types",
+        help_text="Discord webhooks the Fleet Ping posts to for this fleet type.",
+    )
+    mention = models.CharField(
+        max_length=10, choices=MENTION_CHOICES, blank=True, default="",
+        help_text="What to mention in the ping. None = no mention.",
+    )
+    is_enabled = models.BooleanField(default=True)
+    order = models.PositiveSmallIntegerField(default=100)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Staging(models.Model):
+    """A staging location (system) the FC can attach to a Fleet Ping."""
+
+    name = models.CharField(max_length=100)
+    system = models.CharField(max_length=100, help_text="Solar system name, e.g. Jita.")
+    is_enabled = models.BooleanField(default=True)
+    order = models.PositiveSmallIntegerField(default=100)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.system})"

@@ -1,0 +1,221 @@
+{% extends "aa_fleet_tool/base.html" %}
+{% load i18n %}
+
+{% block page_content %}
+      <div class="row">
+        <div class="col-md-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>{% translate "Doctrines" %}</strong>
+            {% if perms.aa_fleet_tool.manage_doctrine %}
+            <button class="btn btn-sm btn-outline-primary" id="btn-new-doctrine">
+              <i class="fas fa-plus"></i>
+            </button>
+            {% endif %}
+          </div>
+          <div class="list-group" id="doctrine-list">
+            {% for doc in doctrines %}
+            <a href="#doctrine-{{ doc.pk }}" class="list-group-item list-group-item-action" data-bs-toggle="collapse">
+              <div class="d-flex justify-content-between">
+                <span>{{ doc.name }}</span>
+                <span class="badge bg-secondary">{{ doc.ships.count }}</span>
+              </div>
+              {% if doc.description %}
+              <small class="text-muted">{{ doc.description }}</small>
+              {% endif %}
+            </a>
+            <div class="collapse" id="doctrine-{{ doc.pk }}">
+              <div class="border border-top-0 rounded-bottom p-2">
+                <table class="table table-sm mb-2">
+                  <thead><tr><th>{% translate "Ship" %}</th><th>{% translate "Role" %}</th>{% if perms.aa_fleet_tool.manage_doctrine %}<th></th>{% endif %}</tr></thead>
+                  <tbody>
+                    {% for ship in doc.ships.all %}
+                    <tr>
+                      <td>{{ ship.ship_name }}</td>
+                      <td><span class="badge bg-secondary">{{ ship.get_role_hint_display }}</span></td>
+                      {% if perms.aa_fleet_tool.manage_doctrine %}
+                      <td>
+                        <button class="btn btn-xs btn-outline-danger py-0 px-1 btn-remove-doctrine-ship"
+                                data-pk="{{ ship.pk }}">
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </td>
+                      {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-muted">{% translate "No ships" %}</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% if perms.aa_fleet_tool.manage_doctrine %}
+                <div class="d-flex gap-1">
+                  <button class="btn btn-sm btn-outline-primary btn-add-doctrine-ship" data-pk="{{ doc.pk }}">
+                    <i class="fas fa-plus"></i> {% translate "Add Ship" %}
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger btn-delete-doctrine" data-pk="{{ doc.pk }}">
+                    <i class="fas fa-trash"></i> {% translate "Delete Doctrine" %}
+                  </button>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">{% translate "No doctrine defined." %}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+{% endblock %}
+
+{% block page_modals %}
+<!-- Modal: New Doctrine -->
+<div class="modal fade" id="modal-new-doctrine" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{% translate "New Doctrine" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="text" class="form-control mb-2" id="new-doctrine-name" placeholder="{% translate "Name" %}">
+      <input type="text" class="form-control" id="new-doctrine-desc" placeholder="{% translate "Description (optional)" %}">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-new-doctrine">{% translate "Create" %}</button>
+    </div>
+  </div></div>
+</div>
+<!-- Modal: Add Doctrine Ship -->
+<div class="modal fade" id="modal-add-doctrine-ship" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{% translate "Add Ship to Doctrine" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div id="add-ship-error" class="alert alert-danger py-1 small d-none"></div>
+      <div class="mb-2 position-relative">
+        <label class="form-label">{% translate "Ship" %} <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="doctrine-ship-search"
+               placeholder="{% translate "Start typing to search… (e.g. Ferox)" %}" autocomplete="off">
+        <div id="ship-search-results"
+             class="list-group position-absolute w-100 shadow-sm"
+             style="z-index:1070;top:100%;max-height:200px;overflow-y:auto;display:none"></div>
+        <input type="hidden" id="doctrine-ship-type-id">
+        <input type="hidden" id="doctrine-ship-name">
+      </div>
+      <div class="mb-2">
+        <label class="form-label">{% translate "Role" %}</label>
+        <select class="form-select" id="doctrine-ship-role">
+          <option value="any">{% translate "Any" %}</option>
+          <option value="dps">DPS</option>
+          <option value="logi">Logi</option>
+          <option value="booster">Booster</option>
+          <option value="fc">FC</option>
+          <option value="ewar">EWAR</option>
+          <option value="hauler">Hauler</option>
+          <option value="scout">Scout</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-add-ship">{% translate "Add" %}</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block page_javascript %}
+<script>
+(function () {
+  let _newDoctrineModal = null;
+  document.getElementById("btn-new-doctrine")?.addEventListener("click", function () {
+    _newDoctrineModal = new bootstrap.Modal(document.getElementById("modal-new-doctrine"));
+    _newDoctrineModal.show();
+  });
+  document.getElementById("btn-submit-new-doctrine")?.addEventListener("click", function () {
+    ftPost("{% url 'aa_fleet_tool:create_doctrine' %}", {
+      name: document.getElementById("new-doctrine-name").value,
+      description: document.getElementById("new-doctrine-desc").value,
+    }).then(r => { if (r.ok) { _newDoctrineModal?.hide(); ftReload(); } else alert(r.error); });
+  });
+  document.querySelectorAll(".btn-delete-doctrine").forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!confirm("{% translate 'Delete doctrine?' %}")) return;
+      const url = "{% url 'aa_fleet_tool:delete_doctrine' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      ftPost(url, {}).then(r => { if (r.ok) ftReload(); });
+    });
+  });
+
+  // Ship typeahead
+  let _shipSearchTimer = null;
+  const _shipSearchInput = document.getElementById("doctrine-ship-search");
+  const _shipResultsDiv = document.getElementById("ship-search-results");
+  if (_shipSearchInput) {
+    _shipSearchInput.addEventListener("input", function () {
+      clearTimeout(_shipSearchTimer);
+      document.getElementById("doctrine-ship-type-id").value = "";
+      document.getElementById("doctrine-ship-name").value = "";
+      const q = this.value.trim();
+      if (q.length < 2) { _shipResultsDiv.style.display = "none"; return; }
+      _shipSearchTimer = setTimeout(() => {
+        fetch("{% url 'aa_fleet_tool:ship_search' %}?q=" + encodeURIComponent(q))
+          .then(r => r.json())
+          .then(data => {
+            _shipResultsDiv.innerHTML = "";
+            if (!data.results.length) { _shipResultsDiv.style.display = "none"; return; }
+            data.results.forEach(ship => {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "list-group-item list-group-item-action py-1 small";
+              btn.textContent = ship.name;
+              btn.addEventListener("click", function () {
+                _shipSearchInput.value = ship.name;
+                document.getElementById("doctrine-ship-type-id").value = ship.type_id;
+                document.getElementById("doctrine-ship-name").value = ship.name;
+                _shipResultsDiv.style.display = "none";
+              });
+              _shipResultsDiv.appendChild(btn);
+            });
+            _shipResultsDiv.style.display = "block";
+          });
+      }, 300);
+    });
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest("#modal-add-doctrine-ship") && _shipResultsDiv) _shipResultsDiv.style.display = "none";
+  });
+
+  let _addShipDocPk = null, _addShipModal = null;
+  document.querySelectorAll(".btn-add-doctrine-ship").forEach(btn => {
+    btn.addEventListener("click", function () {
+      _addShipDocPk = this.dataset.pk;
+      if (_shipSearchInput) _shipSearchInput.value = "";
+      document.getElementById("doctrine-ship-type-id").value = "";
+      document.getElementById("doctrine-ship-name").value = "";
+      document.getElementById("add-ship-error").classList.add("d-none");
+      if (_shipResultsDiv) _shipResultsDiv.style.display = "none";
+      _addShipModal = new bootstrap.Modal(document.getElementById("modal-add-doctrine-ship"));
+      _addShipModal.show();
+    });
+  });
+  document.getElementById("btn-submit-add-ship")?.addEventListener("click", function () {
+    const typeId = document.getElementById("doctrine-ship-type-id").value;
+    const shipName = document.getElementById("doctrine-ship-name").value;
+    const errDiv = document.getElementById("add-ship-error");
+    if (!typeId) { errDiv.textContent = "{% translate 'Please select a ship from the list.' %}"; errDiv.classList.remove("d-none"); return; }
+    errDiv.classList.add("d-none");
+    const url = "{% url 'aa_fleet_tool:add_doctrine_ship' 0 %}".replace("/0/", "/" + _addShipDocPk + "/");
+    ftPost(url, {
+      ship_type_id: typeId, ship_name: shipName,
+      role_hint: document.getElementById("doctrine-ship-role").value,
+    }).then(r => {
+      if (r.ok) { _addShipModal?.hide(); ftReload(); }
+      else { errDiv.textContent = r.error || "{% translate 'Error' %}"; errDiv.classList.remove("d-none"); }
+    });
+  });
+  document.querySelectorAll(".btn-remove-doctrine-ship").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const url = "{% url 'aa_fleet_tool:remove_doctrine_ship' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
+      ftPost(url, {}).then(r => { if (r.ok) ftReload(); });
+    });
+  });
+}());
+</script>
+{% endblock %}

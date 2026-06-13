@@ -1,12 +1,43 @@
 from django.apps import apps
 from django.contrib import admin
 
-from .models import ActiveFleet, Doctrine, DoctrineShip, FleetCommander, FleetMember, FleetWing, FleetSquad, FleetToolConfiguration
+from .models import ActiveFleet, Doctrine, DoctrineShip, FleetCommander, FleetMember, FleetWing, FleetSquad, FleetToolConfiguration, FleetType, MOTDTemplate, Staging, Webhook
+
+
+@admin.register(MOTDTemplate)
+class MOTDTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_public", "created_by")
+    list_filter = ("is_public",)
+    search_fields = ("name",)
+
+
+@admin.register(Webhook)
+class WebhookAdmin(admin.ModelAdmin):
+    list_display = ("name", "url", "is_enabled")
+    list_filter = ("is_enabled",)
+    search_fields = ("name",)
+
+
+@admin.register(FleetType)
+class FleetTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_enabled", "mention", "order")
+    list_filter = ("is_enabled",)
+    search_fields = ("name",)
+    filter_horizontal = ("webhooks",)
+    radio_fields = {"mention": admin.HORIZONTAL}
+
+
+@admin.register(Staging)
+class StagingAdmin(admin.ModelAdmin):
+    list_display = ("name", "system", "is_enabled", "order")
+    list_filter = ("is_enabled",)
+    search_fields = ("name", "system")
 
 
 @admin.register(FleetCommander)
 class FleetCommanderAdmin(admin.ModelAdmin):
-    list_display = ("character", "user")
+    list_display = ("character", "user", "is_active", "activated_at")
+    list_filter = ("is_active",)
     search_fields = ("character__character_name", "user__username")
 
 

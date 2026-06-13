@@ -1,0 +1,330 @@
+{% load i18n %}
+<!-- Modal: Rename Wing -->
+<div class="modal fade" id="modal-rename-wing" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{% translate "Rename Wing" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="text" class="form-control" id="rename-wing-input" placeholder="{% translate "Wing name" %}">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-rename-wing">{% translate "Save" %}</button>
+    </div>
+  </div></div>
+</div>
+<!-- Modal: Rename Squad -->
+<div class="modal fade" id="modal-rename-squad" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{% translate "Rename Squad" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="text" class="form-control" id="rename-squad-input" placeholder="{% translate "Squad name" %}">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-rename-squad">{% translate "Save" %}</button>
+    </div>
+  </div></div>
+</div>
+<!-- Modal: Move Member -->
+<div class="modal fade" id="modal-move-member" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{% translate "Move Member" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <p class="mb-2">{% translate "Character" %}: <strong id="move-char-name"></strong></p>
+      <div class="mb-2">
+        <label class="form-label">{% translate "Role" %}</label>
+        <select class="form-select" id="move-role">
+          <option value="squad_member">{% translate "Squad Member" %}</option>
+          <option value="squad_commander">{% translate "Squad Commander" %}</option>
+          <option value="wing_commander">{% translate "Wing Commander" %}</option>
+          <option value="fleet_commander">{% translate "Fleet Commander" %}</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">{% translate "Wing" %}</label>
+        <select class="form-select" id="move-wing">
+          <option value="">— {% translate "no wing" %} —</option>
+          {% if selected_fleet %}{% for wd in wings_data %}
+          <option value="{{ wd.wing.wing_id }}">{{ wd.wing.name|default:_("Wing") }}</option>
+          {% endfor %}{% endif %}
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">{% translate "Squad" %}</label>
+        <select class="form-select" id="move-squad">
+          <option value="">— {% translate "no squad" %} —</option>
+          {% if selected_fleet %}{% for wd in wings_data %}{% for sq in wd.squads %}
+          <option value="{{ sq.squad.squad_id }}" data-wing="{{ wd.wing.wing_id }}">{{ sq.squad.name|default:_("Squad") }} ({{ wd.wing.name|default:_("Wing") }})</option>
+          {% endfor %}{% endfor %}{% endif %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-warning" id="btn-submit-move">{% translate "Move" %}</button>
+    </div>
+  </div></div>
+</div>
+<!-- Modal: Invite Member -->
+<div class="modal fade" id="modal-invite" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{% translate "Invite Member" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-2">
+        <label class="form-label">{% translate "Character ID" %}</label>
+        <input type="number" class="form-control" id="invite-char-id" placeholder="{% translate "EVE Character ID" %}">
+        <small class="text-muted">{% translate "Note: Character must not have a CSPA charge set." %}</small>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">{% translate "Role" %}</label>
+        <select class="form-select" id="invite-role">
+          <option value="squad_member">{% translate "Squad Member" %}</option>
+          <option value="squad_commander">{% translate "Squad Commander" %}</option>
+          <option value="wing_commander">{% translate "Wing Commander" %}</option>
+          <option value="fleet_commander">{% translate "Fleet Commander" %}</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-invite">{% translate "Invite" %}</button>
+    </div>
+  </div></div>
+</div>
+<!-- Modal: MOTD Load (2-step: select template → edit → set) -->
+<div class="modal fade" id="modal-load-motd" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title"><i class="fas fa-book-open me-2"></i>{% translate "Load MOTD" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-bold small">{% translate "Select template:" %}</label>
+          {% if motd_templates %}
+          <div class="list-group" id="motd-tpl-list" style="max-height:300px;overflow-y:auto">
+            {% for tpl in motd_templates %}
+            <button type="button"
+                    class="list-group-item list-group-item-action py-2 motd-tpl-btn"
+                    data-pk="{{ tpl.pk }}">
+              <div class="fw-bold small">{{ tpl.name }}</div>
+              <small class="text-muted">{{ tpl.text|striptags|truncatechars:80 }}</small>
+            </button>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted small">
+            {% blocktranslate %}No templates yet. Create some in the <strong>MOTD Library</strong> tab.{% endblocktranslate %}
+          </p>
+          {% endif %}
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-bold small">{% translate "Edit MOTD" %}
+            <small class="text-muted fw-normal">{% translate "(changes only affect this instance)" %}</small>
+          </label>
+          <textarea class="form-control" id="motd-load-text" rows="10"
+                    placeholder="{% translate "Select a template or type directly…" %}" style="font-family:monospace"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" id="btn-submit-load-motd">
+        <i class="fas fa-paper-plane me-1"></i>{% translate "Set" %}
+      </button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal: Apply Layout -->
+<div class="modal fade" id="modal-apply-layout" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{% translate "Apply Layout" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <p class="text-muted small">{% translate "The selected layout will be applied to your active fleet. Existing wings/squads will be renamed, missing ones created." %}</p>
+      <div class="mb-3">
+        <label class="form-label">{% translate "Select layout" %}</label>
+        <select class="form-select" id="apply-layout-select">
+          <option value="">— {% translate "Select layout" %} —</option>
+          {% for layout in layouts %}
+          <option value="{{ layout.pk }}"
+                  data-url="{% url 'aa_fleet_tool:apply_layout' 0 layout.pk %}">
+            {{ layout.name }}{% if layout.description %} – {{ layout.description }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-warning" id="btn-submit-apply-layout">{% translate "Apply" %}</button>
+    </div>
+  </div></div>
+</div>
+<!-- Modal: FAT Link -->
+{% if config.enable_fat_link %}
+<div class="modal fade" id="modal-fat-link" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title"><i class="fas fa-crosshairs me-2 text-warning"></i>{% translate "Create FAT Link" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div id="fat-link-result" class="alert alert-success d-none">
+        <strong id="fat-link-result-title">{% translate "FAT Link created!" %}</strong><br>
+        <span id="fat-link-result-msg">{% translate "Share this link in fleet chat:" %}</span><br>
+        <a id="fat-link-url" href="#" target="_blank" class="text-break"></a>
+        <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-copy-fat-link">
+          <i class="fas fa-copy"></i> {% translate "Copy" %}
+        </button>
+      </div>
+      <div id="fat-link-form-body">
+        <!-- Link type -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">{% translate "Link Type" %}</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="fat-link-type" id="fat-type-clickable" value="clickable" checked>
+              <label class="form-check-label" for="fat-type-clickable">
+                <i class="fas fa-mouse-pointer me-1 text-warning"></i>{% translate "Clickable" %}
+                <small class="d-block text-muted">{% translate "Members click the link to register" %}</small>
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="fat-link-type" id="fat-type-esi" value="esi">
+              <label class="form-check-label" for="fat-type-esi">
+                <i class="fas fa-satellite-dish me-1 text-info"></i>{% translate "ESI" %}
+                <small class="d-block text-muted">{% translate "Auto-registers current fleet members" %}</small>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% translate "Fleet Name" %} <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="fat-link-name" placeholder="{% translate "e.g. HAC Roam" %}" value="">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% translate "Fleet Type" %}</label>
+          <input type="text" class="form-control-plaintext fw-bold ps-2 border rounded" id="fat-link-fleet-type-display" readonly>
+          <input type="hidden" id="fat-link-fleet-type-pk">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% translate "Doctrine" %}</label>
+          <input type="text" class="form-control" id="fat-link-doctrine" placeholder="{% translate "optional" %}">
+        </div>
+        <div class="mb-3" id="fat-link-duration-row">
+          <label class="form-label">{% translate "Duration (minutes)" %} <small class="text-muted">— {% translate "clickable links only" %}</small></label>
+          <input type="number" class="form-control" id="fat-link-duration"
+                 value="{{ afat_default_duration }}" min="1" max="1440">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="fat-link-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-warning" id="btn-submit-fat-link">
+        <i class="fas fa-crosshairs me-1"></i>{% translate "Create FAT Link" %}
+      </button>
+    </div>
+  </div></div>
+</div>
+{% endif %}
+
+<!-- Modal: SRP Link -->
+{% if config.enable_srp_link %}
+<div class="modal fade" id="modal-srp-link" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title"><i class="fas fa-shield-alt me-2 text-danger"></i>{% translate "Create SRP Link" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div id="srp-link-result" class="alert alert-success d-none">
+        <strong>{% translate "SRP Link created!" %}</strong><br>
+        {% translate "Share this link with fleet members:" %}<br>
+        <a id="srp-link-url" href="#" target="_blank" class="text-break"></a>
+        <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-copy-srp-link">
+          <i class="fas fa-copy"></i> {% translate "Copy" %}
+        </button>
+      </div>
+      <div id="srp-link-form-body">
+        <div class="mb-3">
+          <label class="form-label">{% translate "SRP Name" %} <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="srp-link-name"
+                 placeholder="{% translate "e.g. HAC Roam SRP" %}"
+                 value="">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% translate "Fleet Type" %}</label>
+          <input type="text" class="form-control-plaintext fw-bold ps-2 border rounded" id="srp-link-fleet-type-display" readonly>
+          <input type="hidden" id="srp-link-fleet-type-pk">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% translate "Doctrine" %} <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="srp-link-doctrine" placeholder="{% translate "e.g. HAC Doctrine" %}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% translate "AAR Link (optional)" %}</label>
+          <input type="text" class="form-control" id="srp-link-aar" placeholder="https://…">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="srp-link-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-danger" id="btn-submit-srp-link">
+        <i class="fas fa-shield-alt me-1"></i>{% translate "Create SRP Link" %}
+      </button>
+    </div>
+  </div></div>
+</div>
+{% endif %}
+
+<!-- Modal: Fleet Ping -->
+<div class="modal fade" id="modal-fleet-ping" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title"><i class="fab fa-discord me-2"></i>{% translate "Fleet Ping" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">{% translate "Fleet Type" %} <span class="text-danger">*</span></label>
+          <select class="form-select" id="ping-fleet-type">
+            <option value="">— {% translate "select type" %} —</option>
+            {% for ft in fleet_types %}
+            <option value="{{ ft.pk }}">{{ ft.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">{% translate "Staging" %}</label>
+          <select class="form-select" id="ping-staging">
+            <option value="">— {% translate "no staging" %} —</option>
+            {% for st in stagings %}
+            <option value="{{ st.pk }}" data-system="{{ st.system }}">{{ st.name }} ({{ st.system }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">{% translate "Note (optional)" %}</label>
+        <textarea class="form-control" id="ping-note" rows="2"
+                  placeholder="{% translate 'e.g. Undock in 5 min, bring scouts' %}"></textarea>
+      </div>
+      <label class="form-label fw-bold small">{% translate "Preview" %}</label>
+      <div class="card card-body py-2 small" id="ping-preview" style="white-space:pre-wrap"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+      <button type="button" class="btn btn-success" id="btn-submit-fleet-ping">
+        <i class="fab fa-discord me-1"></i>{% translate "Send Ping" %}
+      </button>
+    </div>
+  </div></div>
+</div>

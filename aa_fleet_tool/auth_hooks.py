@@ -1,8 +1,5 @@
 """Hook into Alliance Auth"""
 
-# Django
-from django.utils.translation import gettext_lazy as _
-
 # Alliance Auth
 from allianceauth import hooks
 from allianceauth.services.hooks import MenuItemHook, UrlHook
@@ -19,6 +16,8 @@ class FleetToolMenuItem(MenuItemHook):
             f"{app_settings.FLEET_TOOL_APP_NAME}",
             "fas fa-fighter-jet fa-fw",
             "aa_fleet_tool:index",
+            # Community apps must use an order above 1000 (below is reserved for AA)
+            order=9999,
             navactive=["aa_fleet_tool:"],
         )
 
