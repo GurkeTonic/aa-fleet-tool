@@ -7,7 +7,9 @@ build/
 .coverage
 coverage.xml
 *.sqlite3
-static/
+# Only ignore a project-root static/ (collectstatic target); the app ships its
+# own static assets under aa_fleet_tool/static/ which must stay tracked.
+/static/
 /log/
 .env
 node_modules/

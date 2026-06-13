@@ -1,5 +1,6 @@
 {% extends "aa_fleet_tool/base.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block page_nav_right %}
 <li class="nav-item ms-1">
@@ -72,32 +73,19 @@
 
 {% block page_javascript %}
 <script>
-(function () {
-  document.getElementById("btn-sync")?.addEventListener("click", function () {
-    ftPost("{% url 'aa_fleet_tool:trigger_sync' %}", {}).then(() => {
-      this.innerHTML = '<i class="fas fa-check"></i> {% translate "Sync started" %}';
-      setTimeout(() => { this.innerHTML = '<i class="fas fa-sync"></i> {% translate "Sync" %}'; }, 3000);
-    });
-  });
-  document.querySelectorAll(".btn-start-fleet").forEach(btn => {
-    btn.addEventListener("click", function () {
-      this.disabled = true;
-      ftPost("{% url 'aa_fleet_tool:start_fleet' %}", { fc_pk: this.dataset.pk }).then(ftReload);
-    });
-  });
-  document.querySelectorAll(".btn-stop-fleet").forEach(btn => {
-    btn.addEventListener("click", function () {
-      this.disabled = true;
-      ftPost("{% url 'aa_fleet_tool:stop_fleet' %}", { fc_pk: this.dataset.pk }).then(ftReload);
-    });
-  });
-  document.querySelectorAll(".btn-remove-fc").forEach(btn => {
-    btn.addEventListener("click", function () {
-      if (!confirm("{% translate 'Remove FC?' %}")) return;
-      ftPost("{% url 'aa_fleet_tool:remove_fc' %}", { fc_pk: this.dataset.pk }).then(ftReload);
-    });
-  });
-  if (document.getElementById("tbl-commanders")) $("#tbl-commanders").DataTable({ pageLength: 25 });
-}());
+  window.FT_PAGE = {
+    urls: {
+      triggerSync: "{% url 'aa_fleet_tool:trigger_sync' %}",
+      startFleet: "{% url 'aa_fleet_tool:start_fleet' %}",
+      stopFleet: "{% url 'aa_fleet_tool:stop_fleet' %}",
+      removeFc: "{% url 'aa_fleet_tool:remove_fc' %}",
+    },
+    i18n: {
+      syncStarted: "{% translate 'Sync started' %}",
+      sync: "{% translate 'Sync' %}",
+      removeFc: "{% translate 'Remove FC?' %}",
+    },
+  };
 </script>
+<script src="{% static 'aa_fleet_tool/js/commanders.js' %}"></script>
 {% endblock %}

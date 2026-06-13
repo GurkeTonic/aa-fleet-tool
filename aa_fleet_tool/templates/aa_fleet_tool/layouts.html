@@ -1,5 +1,6 @@
 {% extends "aa_fleet_tool/base.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block page_content %}
       <div class="row">
@@ -179,102 +180,24 @@
 
 {% block page_javascript %}
 <script>
-(function () {
-  let _newLayoutModal = null;
-  document.getElementById("btn-new-layout")?.addEventListener("click", function () {
-    document.getElementById("new-layout-name").value = "";
-    document.getElementById("new-layout-desc").value = "";
-    _newLayoutModal = new bootstrap.Modal(document.getElementById("modal-new-layout"));
-    _newLayoutModal.show();
-  });
-  document.getElementById("btn-submit-new-layout")?.addEventListener("click", function () {
-    const name = document.getElementById("new-layout-name").value.trim();
-    if (!name) { alert("{% translate 'Name required' %}"); return; }
-    ftPost("{% url 'aa_fleet_tool:create_layout' %}", {
-      name, description: document.getElementById("new-layout-desc").value.trim(),
-    }).then(r => { if (r.ok) { _newLayoutModal?.hide(); ftReload(); } else alert(r.error); });
-  });
-  document.querySelectorAll(".btn-delete-layout").forEach(btn => {
-    btn.addEventListener("click", function () {
-      if (!confirm("{% translate 'Delete this layout?' %}")) return;
-      const url = "{% url 'aa_fleet_tool:delete_layout' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
-      ftPost(url, {}).then(r => { if (r.ok) ftReload(); else alert(r.error); });
-    });
-  });
-  let _addLayoutWingPk = null, _addLayoutWingModal = null;
-  document.querySelectorAll(".btn-add-layout-wing").forEach(btn => {
-    btn.addEventListener("click", function () {
-      _addLayoutWingPk = this.dataset.pk;
-      document.getElementById("add-layout-wing-name").value = "";
-      _addLayoutWingModal = new bootstrap.Modal(document.getElementById("modal-add-layout-wing"));
-      _addLayoutWingModal.show();
-    });
-  });
-  document.getElementById("btn-submit-add-layout-wing")?.addEventListener("click", function () {
-    const name = document.getElementById("add-layout-wing-name").value.trim();
-    if (!name) { alert("{% translate 'Name required' %}"); return; }
-    const url = "{% url 'aa_fleet_tool:add_layout_wing' 0 %}".replace("/0/", "/" + _addLayoutWingPk + "/");
-    ftPost(url, { name }).then(r => { if (r.ok) { _addLayoutWingModal?.hide(); ftReload(); } else alert(r.error); });
-  });
-  let _renameLayoutWingPk = null, _renameLayoutWingModal = null;
-  document.querySelectorAll(".btn-rename-layout-wing").forEach(btn => {
-    btn.addEventListener("click", function () {
-      _renameLayoutWingPk = this.dataset.pk;
-      document.getElementById("rename-layout-wing-name").value = this.dataset.name;
-      _renameLayoutWingModal = new bootstrap.Modal(document.getElementById("modal-rename-layout-wing"));
-      _renameLayoutWingModal.show();
-    });
-  });
-  document.getElementById("btn-submit-rename-layout-wing")?.addEventListener("click", function () {
-    const name = document.getElementById("rename-layout-wing-name").value.trim();
-    if (!name) { alert("{% translate 'Name required' %}"); return; }
-    const url = "{% url 'aa_fleet_tool:rename_layout_wing' 0 %}".replace("/0/", "/" + _renameLayoutWingPk + "/");
-    ftPost(url, { name }).then(r => { if (r.ok) { _renameLayoutWingModal?.hide(); ftReload(); } else alert(r.error); });
-  });
-  document.querySelectorAll(".btn-delete-layout-wing").forEach(btn => {
-    btn.addEventListener("click", function () {
-      if (!confirm("{% translate 'Delete wing?' %}")) return;
-      const url = "{% url 'aa_fleet_tool:delete_layout_wing' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
-      ftPost(url, {}).then(r => { if (r.ok) ftReload(); else alert(r.error); });
-    });
-  });
-  let _addLayoutSquadWingPk = null, _addLayoutSquadModal = null;
-  document.querySelectorAll(".btn-add-layout-squad").forEach(btn => {
-    btn.addEventListener("click", function () {
-      _addLayoutSquadWingPk = this.dataset.pk;
-      document.getElementById("add-layout-squad-name").value = "";
-      _addLayoutSquadModal = new bootstrap.Modal(document.getElementById("modal-add-layout-squad"));
-      _addLayoutSquadModal.show();
-    });
-  });
-  document.getElementById("btn-submit-add-layout-squad")?.addEventListener("click", function () {
-    const name = document.getElementById("add-layout-squad-name").value.trim();
-    if (!name) { alert("{% translate 'Name required' %}"); return; }
-    const url = "{% url 'aa_fleet_tool:add_layout_squad' 0 %}".replace("/0/", "/" + _addLayoutSquadWingPk + "/");
-    ftPost(url, { name }).then(r => { if (r.ok) { _addLayoutSquadModal?.hide(); ftReload(); } else alert(r.error); });
-  });
-  let _renameLayoutSquadPk = null, _renameLayoutSquadModal = null;
-  document.querySelectorAll(".btn-rename-layout-squad").forEach(btn => {
-    btn.addEventListener("click", function () {
-      _renameLayoutSquadPk = this.dataset.pk;
-      document.getElementById("rename-layout-squad-name").value = this.dataset.name;
-      _renameLayoutSquadModal = new bootstrap.Modal(document.getElementById("modal-rename-layout-squad"));
-      _renameLayoutSquadModal.show();
-    });
-  });
-  document.getElementById("btn-submit-rename-layout-squad")?.addEventListener("click", function () {
-    const name = document.getElementById("rename-layout-squad-name").value.trim();
-    if (!name) { alert("{% translate 'Name required' %}"); return; }
-    const url = "{% url 'aa_fleet_tool:rename_layout_squad' 0 %}".replace("/0/", "/" + _renameLayoutSquadPk + "/");
-    ftPost(url, { name }).then(r => { if (r.ok) { _renameLayoutSquadModal?.hide(); ftReload(); } else alert(r.error); });
-  });
-  document.querySelectorAll(".btn-delete-layout-squad").forEach(btn => {
-    btn.addEventListener("click", function () {
-      if (!confirm("{% translate 'Delete squad?' %}")) return;
-      const url = "{% url 'aa_fleet_tool:delete_layout_squad' 0 %}".replace("/0/", "/" + this.dataset.pk + "/");
-      ftPost(url, {}).then(r => { if (r.ok) ftReload(); else alert(r.error); });
-    });
-  });
-}());
+  window.FT_PAGE = {
+    urls: {
+      createLayout: "{% url 'aa_fleet_tool:create_layout' %}",
+      deleteLayout: "{% url 'aa_fleet_tool:delete_layout' 0 %}",
+      addLayoutWing: "{% url 'aa_fleet_tool:add_layout_wing' 0 %}",
+      renameLayoutWing: "{% url 'aa_fleet_tool:rename_layout_wing' 0 %}",
+      deleteLayoutWing: "{% url 'aa_fleet_tool:delete_layout_wing' 0 %}",
+      addLayoutSquad: "{% url 'aa_fleet_tool:add_layout_squad' 0 %}",
+      renameLayoutSquad: "{% url 'aa_fleet_tool:rename_layout_squad' 0 %}",
+      deleteLayoutSquad: "{% url 'aa_fleet_tool:delete_layout_squad' 0 %}",
+    },
+    i18n: {
+      nameRequired: "{% translate 'Name required' %}",
+      deleteLayout: "{% translate 'Delete this layout?' %}",
+      deleteWing: "{% translate 'Delete wing?' %}",
+      deleteSquad: "{% translate 'Delete squad?' %}",
+    },
+  };
 </script>
+<script src="{% static 'aa_fleet_tool/js/layouts.js' %}"></script>
 {% endblock %}

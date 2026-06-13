@@ -1,5 +1,6 @@
 {% extends "allianceauth/base-bs5.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block extra_css %}
 {% include "bundles/datatables-2-css-bs5.html" %}
@@ -62,18 +63,7 @@
 
 {% block extra_javascript %}
 {% include "bundles/datatables-2-js-bs5.html" %}
-<script>
-  // Shared CSRF + POST helper for all Fleet Tool pages
-  const FT_CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? "";
-  function ftPost(url, data) {
-    const fd = new FormData();
-    fd.append("csrfmiddlewaretoken", FT_CSRF);
-    for (const [k, v] of Object.entries(data || {})) fd.append(k, v);
-    return fetch(url, { method: "POST", body: fd })
-      .then(r => r.json())
-      .catch(err => { console.error("POST failed:", url, err); return { ok: false, error: "{% translate 'Server error – see console.' %}" }; });
-  }
-  function ftReload() { window.location.reload(); }
-</script>
+<script>window.FT_COMMON = { i18n: { serverError: "{% translate 'Server error – see console.' %}" } };</script>
+<script src="{% static 'aa_fleet_tool/js/common.js' %}"></script>
 {% block page_javascript %}{% endblock %}
 {% endblock %}
