@@ -5,6 +5,13 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-06-13
+
+### Changed
+
+- The active fleet page now refreshes every 5 seconds (was 15), matching the
+  backend sync.
+
 ## [0.4.0] - 2026-06-13
 
 ### Changed

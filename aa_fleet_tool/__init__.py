@@ -1,6 +1,6 @@
 """Initialize the app"""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __title__ = "Fleet Tool"
 
 __package_name__ = "aa-fleet-tool"

@@ -451,7 +451,8 @@
     }
 
     if (fleetPk) {
-      setInterval(refreshMembersLive, 15000);
+      // Match the 5s backend sync so the table and graphs stay near-live.
+      setInterval(refreshMembersLive, 5000);
     }
   });
 
