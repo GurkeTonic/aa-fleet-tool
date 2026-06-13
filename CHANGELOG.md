@@ -5,6 +5,14 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-13
+
+### Fixed
+
+- Pin the pre-commit CI job to Python 3.13. Resolving the interpreter from
+  `pyproject.toml` pulled in Python 3.14, where `pyupgrade` crashes
+  (`tokenize.cookie_re` is now a bytes pattern).
+
 ## [0.2.1] - 2026-06-13
 
 ### Fixed
