@@ -5,6 +5,8 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-13
+
 ### Added
 
 - **On-demand fleet tracking** — FCs press **Fleet Start** / **Fleet Stop** instead
