@@ -15,7 +15,7 @@ class TestComposition(TestCase):
         self.assertEqual(comp["dps"]["count"], 2)
         self.assertEqual(comp["logi"]["count"], 1)
         self.assertEqual(comp["booster"]["count"], 1)
-        self.assertEqual(comp["dps"]["pct"], 50)   # 2 of 4
+        self.assertEqual(comp["dps"]["pct"], 50)  # 2 of 4
         self.assertEqual(comp["logi"]["pct"], 25)
 
     @patch("aa_fleet_tool.composition.ship_roles")
@@ -37,7 +37,7 @@ class TestComposition(TestCase):
         mock_roles.return_value = {587: "dps", 999: "dps"}
         doctrine_roles = {587: "logi"}  # only 587 is in the doctrine
         comp = composition.composition_counts([587, 999], doctrine_roles)
-        self.assertEqual(comp["logi"]["count"], 1)   # 587 → logi
+        self.assertEqual(comp["logi"]["count"], 1)  # 587 → logi
         self.assertEqual(comp["other"]["count"], 1)  # 999 off-doctrine → other
         self.assertEqual(comp["dps"]["count"], 0)
         mock_roles.assert_not_called()  # SDE bypassed in doctrine mode

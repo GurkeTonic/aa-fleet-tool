@@ -18,20 +18,20 @@ COMP_ROLES = ["dps", "logi", "booster", "ewar", "other"]
 # Easy to tweak — e.g. move Recon groups (833/906) out of EWAR if preferred.
 SHIP_GROUP_ROLE = {
     # Logistics
-    832: "logi",    # Logistics (cruisers)
-    1527: "logi",   # Logistics Frigate
-    1538: "logi",   # Force Auxiliary
+    832: "logi",  # Logistics (cruisers)
+    1527: "logi",  # Logistics Frigate
+    1538: "logi",  # Force Auxiliary
     # Boosters / command
-    540: "booster",   # Command Ship
+    540: "booster",  # Command Ship
     1534: "booster",  # Command Destroyer
     # EWAR
-    893: "ewar",   # Electronic Attack Ship
-    833: "ewar",   # Force Recon Ship
-    906: "ewar",   # Combat Recon Ship
+    893: "ewar",  # Electronic Attack Ship
+    833: "ewar",  # Force Recon Ship
+    906: "ewar",  # Combat Recon Ship
     # Non-combat
-    29: "other",    # Capsule
-    31: "other",    # Shuttle
-    28: "other",    # Industrial
+    29: "other",  # Capsule
+    31: "other",  # Shuttle
+    28: "other",  # Industrial
     1202: "other",  # Blockade Runner
-    380: "other",   # Deep Space Transport
+    380: "other",  # Deep Space Transport
 }

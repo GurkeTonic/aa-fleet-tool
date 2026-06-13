@@ -16,8 +16,9 @@ class AaFleetToolConfig(AppConfig):
     verbose_name = f"Fleet Tool v{__version__}"
 
     def ready(self):
-        from celery import current_app
         from datetime import timedelta
+
+        from celery import current_app
 
         current_app.conf.beat_schedule.update(
             {

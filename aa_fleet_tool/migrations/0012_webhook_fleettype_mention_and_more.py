@@ -6,40 +6,62 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('aa_fleet_tool', '0011_fleettype_staging_activefleet_fat_link_hash_and_more'),
+        ("aa_fleet_tool", "0011_fleettype_staging_activefleet_fat_link_hash_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Webhook',
+            name="Webhook",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('url', models.URLField(help_text='Discord webhook URL.', max_length=500)),
-                ('is_enabled', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "url",
+                    models.URLField(help_text="Discord webhook URL.", max_length=500),
+                ),
+                ("is_enabled", models.BooleanField(default=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.AddField(
-            model_name='fleettype',
-            name='mention',
-            field=models.CharField(blank=True, choices=[('', 'None'), ('here', '@here'), ('everyone', '@everyone')], default='', help_text='What to mention in the ping. None = no mention.', max_length=10),
+            model_name="fleettype",
+            name="mention",
+            field=models.CharField(
+                blank=True,
+                choices=[("", "None"), ("here", "@here"), ("everyone", "@everyone")],
+                default="",
+                help_text="What to mention in the ping. None = no mention.",
+                max_length=10,
+            ),
         ),
         migrations.AlterField(
-            model_name='fleettype',
-            name='role_mention',
-            field=models.CharField(blank=True, default='', max_length=100),
+            model_name="fleettype",
+            name="role_mention",
+            field=models.CharField(blank=True, default="", max_length=100),
         ),
         migrations.AlterField(
-            model_name='fleettype',
-            name='webhook_url',
-            field=models.URLField(blank=True, default='', max_length=500),
+            model_name="fleettype",
+            name="webhook_url",
+            field=models.URLField(blank=True, default="", max_length=500),
         ),
         migrations.AddField(
-            model_name='fleettype',
-            name='webhooks',
-            field=models.ManyToManyField(blank=True, help_text='Discord webhooks the Fleet Ping posts to for this fleet type.', related_name='fleet_types', to='aa_fleet_tool.webhook'),
+            model_name="fleettype",
+            name="webhooks",
+            field=models.ManyToManyField(
+                blank=True,
+                help_text="Discord webhooks the Fleet Ping posts to for this fleet type.",
+                related_name="fleet_types",
+                to="aa_fleet_tool.webhook",
+            ),
         ),
     ]

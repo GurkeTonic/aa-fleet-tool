@@ -5,6 +5,15 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-13
+
+### Fixed
+
+- CI is green again: align flake8 to black's line length, give isort the
+  `black` profile (no more isort/black conflict), and stop pylint failing on
+  `import-error` in the dependency-less CI environment. Applied the formatters
+  across the code base and removed unused imports/variables.
+
 ## [0.2.0] - 2026-06-13
 
 ### Added

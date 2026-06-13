@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
+
 from esi.exceptions import HTTPClientError, HTTPServerError
 
 from ..models import FleetLayout, FleetLayoutSquad, FleetLayoutWing
@@ -55,7 +56,9 @@ def add_layout_wing(request, pk):
     name = request.POST.get("name", "").strip() or "Wing"
     next_pos = (layout.wings.aggregate(m=Max("position"))["m"] or 0) + 1
     wing = FleetLayoutWing.objects.create(layout=layout, position=next_pos, name=name)
-    return JsonResponse({"ok": True, "pk": wing.pk, "name": wing.name, "position": wing.position})
+    return JsonResponse(
+        {"ok": True, "pk": wing.pk, "name": wing.name, "position": wing.position}
+    )
 
 
 @login_required
@@ -120,24 +123,32 @@ def apply_layout(request, fleet_pk, layout_pk):
     """
     fleet, token = fleet_write(request, fleet_pk)
     if not fleet:
-        return JsonResponse({"ok": False, "error": _("Not authorized or no write token")}, status=403)
+        return JsonResponse(
+            {"ok": False, "error": _("Not authorized or no write token")}, status=403
+        )
 
     layout = get_object_or_404(FleetLayout, pk=layout_pk)
     layout_wings = list(layout.wings.prefetch_related("squads").order_by("position"))
     if not layout_wings:
-        return JsonResponse({"ok": False, "error": _("Layout has no wings defined")}, status=400)
+        return JsonResponse(
+            {"ok": False, "error": _("Layout has no wings defined")}, status=400
+        )
 
     fleet_id = fleet.fleet_id
 
     # Fetch current wings fresh from ESI
     try:
         existing_wings = sorted(
-            esi.client.Fleets.GetFleetsFleetIdWings(fleet_id=fleet_id, token=token).result(),
+            esi.client.Fleets.GetFleetsFleetIdWings(
+                fleet_id=fleet_id, token=token
+            ).result(),
             key=lambda w: w.id,
         )
     except (HTTPClientError, HTTPServerError) as exc:
         status = getattr(exc, "status_code", 502)
-        return JsonResponse({"ok": False, "error": f"ESI wings fetch failed: {status}"}, status=502)
+        return JsonResponse(
+            {"ok": False, "error": f"ESI wings fetch failed: {status}"}, status=502
+        )
 
     errors = []
 
@@ -145,10 +156,14 @@ def apply_layout(request, fleet_pk, layout_pk):
         if i < len(existing_wings):
             ew = existing_wings[i]
             wing_id = ew.id
-            existing_squads = sorted(getattr(ew, "squads", None) or [], key=lambda s: s.id)
+            existing_squads = sorted(
+                getattr(ew, "squads", None) or [], key=lambda s: s.id
+            )
         else:
             data, err = esi_call(
-                lambda: esi.client.Fleets.PostFleetsFleetIdWings(fleet_id=fleet_id, token=token)
+                lambda: esi.client.Fleets.PostFleetsFleetIdWings(
+                    fleet_id=fleet_id, token=token
+                )
             )
             if err:
                 errors.append(_("Wing '%s' could not be created") % layout_wing.name)
@@ -157,8 +172,9 @@ def apply_layout(request, fleet_pk, layout_pk):
             existing_squads = []
 
         # Rename the wing (best effort)
+        put_wing = esi.client.Fleets.PutFleetsFleetIdWingsWingId
         esi_call(
-            lambda wid=wing_id, name=layout_wing.name: esi.client.Fleets.PutFleetsFleetIdWingsWingId(
+            lambda wid=wing_id, name=layout_wing.name, op=put_wing: op(
                 fleet_id=fleet_id, wing_id=wid, body={"name": name}, token=token
             )
         )
@@ -168,18 +184,22 @@ def apply_layout(request, fleet_pk, layout_pk):
             if j < len(existing_squads):
                 squad_id = existing_squads[j].id
             else:
+                post_squad = esi.client.Fleets.PostFleetsFleetIdWingsWingIdSquads
                 data, err = esi_call(
-                    lambda wid=wing_id: esi.client.Fleets.PostFleetsFleetIdWingsWingIdSquads(
+                    lambda wid=wing_id, op=post_squad: op(
                         fleet_id=fleet_id, wing_id=wid, token=token
                     )
                 )
                 if err:
-                    errors.append(_("Squad '%s' could not be created") % layout_squad.name)
+                    errors.append(
+                        _("Squad '%s' could not be created") % layout_squad.name
+                    )
                     continue
                 squad_id = data.squad_id
 
+            put_squad = esi.client.Fleets.PutFleetsFleetIdSquadsSquadId
             esi_call(
-                lambda sid=squad_id, name=layout_squad.name: esi.client.Fleets.PutFleetsFleetIdSquadsSquadId(
+                lambda sid=squad_id, name=layout_squad.name, op=put_squad: op(
                     fleet_id=fleet_id, squad_id=sid, body={"name": name}, token=token
                 )
             )

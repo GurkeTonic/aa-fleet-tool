@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from allianceauth.services.hooks import get_extension_logger
 
+from ..composition import composition_counts, doctrine_overrides
 from ..models import (
     ActiveFleet,
     Doctrine,
@@ -20,7 +21,6 @@ from ..models import (
     MOTDTemplate,
     Staging,
 )
-from ..composition import composition_counts, doctrine_overrides
 from ..providers import esi
 from .common import esi_call, fleet_write, nav_context, resolve_doctrine
 
@@ -42,9 +42,13 @@ def index(request):
     wings_data = []
     on_doctrine_chars = set()
     on_doctrine_count = 0
-    comp = {"dps": {"count": 0, "pct": 0}, "logi": {"count": 0, "pct": 0},
-            "booster": {"count": 0, "pct": 0}, "ewar": {"count": 0, "pct": 0},
-            "other": {"count": 0, "pct": 0}}
+    comp = {
+        "dps": {"count": 0, "pct": 0},
+        "logi": {"count": 0, "pct": 0},
+        "booster": {"count": 0, "pct": 0},
+        "ewar": {"count": 0, "pct": 0},
+        "other": {"count": 0, "pct": 0},
+    }
     snapshot_data = []
 
     fleet_pk = request.GET.get("fleet")
@@ -55,7 +59,9 @@ def index(request):
         try:
             selected_fleet = active_fleets.get(pk=fleet_pk)
             selected_fleet_members = list(
-                selected_fleet.members.order_by("role", "wing_id", "squad_id", "character_name")
+                selected_fleet.members.order_by(
+                    "role", "wing_id", "squad_id", "character_name"
+                )
             )
 
             # A selected doctrine drives the compliance overlay AND fully replaces
@@ -81,17 +87,28 @@ def index(request):
             )
 
             for wing in selected_fleet.wings.prefetch_related("squads"):
-                wing_members = [m for m in selected_fleet_members if m.wing_id == wing.wing_id]
+                wing_members = [
+                    m for m in selected_fleet_members if m.wing_id == wing.wing_id
+                ]
                 squads = []
                 for squad in wing.squads.all():
-                    squad_members = [m for m in wing_members if m.squad_id == squad.squad_id]
+                    squad_members = [
+                        m for m in wing_members if m.squad_id == squad.squad_id
+                    ]
                     squads.append({"squad": squad, "members": squad_members})
-                wings_data.append({"wing": wing, "squads": squads, "members": wing_members})
+                wings_data.append(
+                    {"wing": wing, "squads": squads, "members": wing_members}
+                )
 
         except ActiveFleet.DoesNotExist:
             pass
 
-    role_counts = {"fleet_commander": 0, "wing_commander": 0, "squad_commander": 0, "squad_member": 0}
+    role_counts = {
+        "fleet_commander": 0,
+        "wing_commander": 0,
+        "squad_commander": 0,
+        "squad_member": 0,
+    }
     for m in selected_fleet_members:
         if m.role in role_counts:
             role_counts[m.role] += 1
@@ -111,9 +128,9 @@ def index(request):
     if config.use_fittings_doctrines and apps.is_installed("fittings"):
         try:
             from fittings.models import Doctrine as FittingsDoctrine
+
             fittings_doctrines = list(
-                FittingsDoctrine.objects
-                .prefetch_related("fittings__ship_type")
+                FittingsDoctrine.objects.prefetch_related("fittings__ship_type")
                 .filter()
                 .order_by("name")
             )
@@ -130,19 +147,24 @@ def index(request):
     afat_default_duration = 60
     if config.enable_fat_link and apps.is_installed("afat"):
         try:
-            from afat.models import Doctrine as AfatDoctrine, Setting as AfatSetting
-            afat_doctrines = list(AfatDoctrine.objects.filter(is_enabled=True).values("pk", "name"))
+            from afat.models import Doctrine as AfatDoctrine
+            from afat.models import Setting as AfatSetting
+
+            afat_doctrines = list(
+                AfatDoctrine.objects.filter(is_enabled=True).values("pk", "name")
+            )
             setting = AfatSetting.objects.first()
             if setting:
                 afat_default_duration = setting.default_fatlink_expiry_time
         except Exception as exc:
             logger.warning("afat data lookup failed: %s", exc)
 
-    # Whether the stored FAT link is a clickable one (ESI FATs aren't shared in the ping).
+    # Whether the stored FAT link is clickable (ESI FATs aren't pinged).
     fleet_clickable_fat = False
     if selected_fleet and selected_fleet.fat_link_hash and apps.is_installed("afat"):
         try:
             from afat.models import FatLink
+
             fl = FatLink.objects.filter(hash=selected_fleet.fat_link_hash).first()
             fleet_clickable_fat = bool(fl and not fl.is_esilink)
         except Exception as exc:
@@ -151,13 +173,15 @@ def index(request):
     fleet_summary = []
     for af in active_fleets:
         total = af.members.count()
-        fleet_summary.append({
-            "fleet": af,
-            "member_count": total,
-            "is_my_fc": af.fc.user == request.user,
-        })
+        fleet_summary.append(
+            {
+                "fleet": af,
+                "member_count": total,
+                "is_my_fc": af.fc.user == request.user,
+            }
+        )
 
-    # Extract numeric pk for fittings doctrine (template can't do string + int with add filter)
+    # Numeric pk for fittings doctrine (template can't add str + int)
     selected_fittings_doctrine_pk = None
     if doctrine_pk and str(doctrine_pk).startswith("fittings-"):
         try:
@@ -202,8 +226,16 @@ def fleet_members_json(request, fleet_pk):
     fleet = get_object_or_404(ActiveFleet, pk=fleet_pk)
     members = list(
         fleet.members.order_by("role", "wing_id", "squad_id", "character_name").values(
-            "character_id", "character_name", "ship_type_id", "ship_name",
-            "system_name", "role", "wing_id", "squad_id", "takes_fleet_warp", "join_time",
+            "character_id",
+            "character_name",
+            "ship_type_id",
+            "ship_name",
+            "system_name",
+            "role",
+            "wing_id",
+            "squad_id",
+            "takes_fleet_warp",
+            "join_time",
             "station_id",
         )
     )
@@ -222,7 +254,12 @@ def fleet_members_json(request, fleet_pk):
         m["wing_squad_label"] = " / ".join(parts)
         m["join_time"] = m["join_time"].isoformat() if m["join_time"] else None
 
-    fleet_role_counts = {"fleet_commander": 0, "wing_commander": 0, "squad_commander": 0, "squad_member": 0}
+    fleet_role_counts = {
+        "fleet_commander": 0,
+        "wing_commander": 0,
+        "squad_commander": 0,
+        "squad_member": 0,
+    }
     for m in members:
         if m["role"] in fleet_role_counts:
             fleet_role_counts[m["role"]] += 1
@@ -235,27 +272,40 @@ def fleet_members_json(request, fleet_pk):
         doctrine_ship_ids, ship_role_map = resolve_doctrine(doctrine_pk)
         if doctrine_ship_ids is not None:
             for m in members:
-                doctrine_match[str(m["character_id"])] = m["ship_type_id"] in doctrine_ship_ids
+                doctrine_match[str(m["character_id"])] = (
+                    m["ship_type_id"] in doctrine_ship_ids
+                )
             doctrine_roles = doctrine_overrides(ship_role_map)
 
     # Composition: SDE ship group by default; a doctrine fully overrides.
-    role_breakdown = composition_counts([m["ship_type_id"] for m in members], doctrine_roles)
+    role_breakdown = composition_counts(
+        [m["ship_type_id"] for m in members], doctrine_roles
+    )
 
     history = [
-        {"t": s["timestamp"].isoformat(), "dps": s["dps"], "logi": s["logi"], "total": s["total"]}
+        {
+            "t": s["timestamp"].isoformat(),
+            "dps": s["dps"],
+            "logi": s["logi"],
+            "total": s["total"],
+        }
         for s in fleet.snapshots.values("timestamp", "dps", "logi", "total")
     ]
 
-    return JsonResponse({
-        "ok": True,
-        "member_count": len(members),
-        "last_updated": fleet.last_updated.isoformat() if fleet.last_updated else None,
-        "members": members,
-        "doctrine_match": doctrine_match,
-        "role_breakdown": role_breakdown,
-        "fleet_role_counts": fleet_role_counts,
-        "history": history,
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "member_count": len(members),
+            "last_updated": (
+                fleet.last_updated.isoformat() if fleet.last_updated else None
+            ),
+            "members": members,
+            "doctrine_match": doctrine_match,
+            "role_breakdown": role_breakdown,
+            "fleet_role_counts": fleet_role_counts,
+            "history": history,
+        }
+    )
 
 
 @login_required
@@ -408,7 +458,10 @@ def rename_wing(request, fleet_pk, wing_id):
     name = request.POST.get("name", "")
     _ignored, err = esi_call(
         lambda: esi.client.Fleets.PutFleetsFleetIdWingsWingId(
-            fleet_id=fleet.fleet_id, wing_id=int(wing_id), body={"name": name}, token=token
+            fleet_id=fleet.fleet_id,
+            wing_id=int(wing_id),
+            body={"name": name},
+            token=token,
         )
     )
     if err:
@@ -462,7 +515,10 @@ def rename_squad(request, fleet_pk, squad_id):
     name = request.POST.get("name", "")
     _ignored, err = esi_call(
         lambda: esi.client.Fleets.PutFleetsFleetIdSquadsSquadId(
-            fleet_id=fleet.fleet_id, squad_id=int(squad_id), body={"name": name}, token=token
+            fleet_id=fleet.fleet_id,
+            squad_id=int(squad_id),
+            body={"name": name},
+            token=token,
         )
     )
     if err:

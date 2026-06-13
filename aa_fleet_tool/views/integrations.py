@@ -31,7 +31,9 @@ def create_fat_link(request, fleet_pk):
 
     try:
         import secrets
-        from afat.models import FatLink, Duration
+
+        from afat.models import Duration, FatLink
+
         from allianceauth.eveonline.models import EveCharacter
 
         hash_val = secrets.token_urlsafe(30)[:30]
@@ -68,6 +70,7 @@ def create_fat_link(request, fleet_pk):
             )
             # Feed current members directly to afat's processing task
             from afat.tasks import process_fats
+
             member_data = list(
                 fleet.members.values("character_id", "solar_system_id", "ship_type_id")
             )
@@ -80,7 +83,14 @@ def create_fat_link(request, fleet_pk):
             fleet.fat_link_hash = hash_val
             fleet.save(update_fields=["fat_link_hash"])
             details_url = f"/afat/fatlinks/{hash_val}/details/"
-            return JsonResponse({"ok": True, "hash": hash_val, "link_type": "esi", "details_url": details_url})
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "hash": hash_val,
+                    "link_type": "esi",
+                    "details_url": details_url,
+                }
+            )
         else:
             fat_link = FatLink.objects.create(
                 fleet=name,
@@ -96,7 +106,14 @@ def create_fat_link(request, fleet_pk):
             fleet.fat_link_hash = hash_val
             fleet.save(update_fields=["fat_link_hash"])
             register_url = f"/afat/fatlinks/{hash_val}/register/"
-            return JsonResponse({"ok": True, "hash": hash_val, "link_type": "clickable", "register_url": register_url})
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "hash": hash_val,
+                    "link_type": "clickable",
+                    "register_url": register_url,
+                }
+            )
 
     except Exception as exc:
         logger.exception("FAT link creation failed: %s", exc)
@@ -108,7 +125,9 @@ def create_fat_link(request, fleet_pk):
 @require_POST
 def create_srp_link(request, fleet_pk):
     if not apps.is_installed("aasrp"):
-        return JsonResponse({"ok": False, "error": "aasrp is not installed"}, status=400)
+        return JsonResponse(
+            {"ok": False, "error": "aasrp is not installed"}, status=400
+        )
 
     fleet = get_object_or_404(ActiveFleet, pk=fleet_pk)
     if fleet.fc.user != request.user:
@@ -122,12 +141,15 @@ def create_srp_link(request, fleet_pk):
         return JsonResponse({"ok": False, "error": "Doctrine required"}, status=400)
 
     try:
-        from aasrp.models import SrpLink, FleetType as AasrpFleetType
+        from aasrp.models import FleetType as AasrpFleetType
+        from aasrp.models import SrpLink
 
         fleet_type_name = request.POST.get("fleet_type_name", "").strip()
         fleet_type = None
         if fleet_type_name:
-            fleet_type = AasrpFleetType.objects.filter(name__iexact=fleet_type_name).first()
+            fleet_type = AasrpFleetType.objects.filter(
+                name__iexact=fleet_type_name
+            ).first()
             if fleet_type is None:
                 fleet_type = AasrpFleetType.objects.create(name=fleet_type_name)
 
@@ -136,6 +158,7 @@ def create_srp_link(request, fleet_pk):
             character = request.user.profile.main_character
         except Exception:
             from allianceauth.eveonline.models import EveCharacter
+
             character = EveCharacter.objects.filter(
                 fleet_commander__user=request.user
             ).first()
@@ -156,7 +179,9 @@ def create_srp_link(request, fleet_pk):
         fleet.save(update_fields=["srp_link_code"])
 
         request_url = f"/srp/srp-link/{srp_link.srp_code}/request-srp/"
-        return JsonResponse({"ok": True, "srp_code": srp_link.srp_code, "request_url": request_url})
+        return JsonResponse(
+            {"ok": True, "srp_code": srp_link.srp_code, "request_url": request_url}
+        )
 
     except Exception as exc:
         logger.exception("SRP link creation failed: %s", exc)

@@ -6,16 +6,16 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('aa_fleet_tool', '0013_migrate_webhooks'),
+        ("aa_fleet_tool", "0013_migrate_webhooks"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='fleettype',
-            name='role_mention',
+            model_name="fleettype",
+            name="role_mention",
         ),
         migrations.RemoveField(
-            model_name='fleettype',
-            name='webhook_url',
+            model_name="fleettype",
+            name="webhook_url",
         ),
     ]

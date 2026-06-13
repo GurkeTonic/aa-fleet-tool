@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('aa_fleet_tool', '0008_fleetcommander_activated_at_fleetcommander_is_active'),
+        ("aa_fleet_tool", "0008_fleetcommander_activated_at_fleetcommander_is_active"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='motdtemplate',
-            name='is_public',
+            model_name="motdtemplate",
+            name="is_public",
             field=models.BooleanField(default=True),
         ),
     ]

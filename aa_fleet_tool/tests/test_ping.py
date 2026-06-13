@@ -14,7 +14,7 @@ class TestDiscordWebhook(TestCase):
     @patch("aa_fleet_tool.discord.requests.post")
     def test_ok_sets_allowed_mentions(self, mock_post):
         mock_post.return_value = Mock(status_code=204)
-        ok, err = post_webhook("https://discord/x", content="<@&1> form up")
+        ok, _ = post_webhook("https://discord/x", content="<@&1> form up")
         self.assertTrue(ok)
         payload = mock_post.call_args.kwargs["json"]
         self.assertEqual(payload["allowed_mentions"]["parse"], ["everyone"])
@@ -22,11 +22,11 @@ class TestDiscordWebhook(TestCase):
     @patch("aa_fleet_tool.discord.requests.post")
     def test_bad_status_is_error(self, mock_post):
         mock_post.return_value = Mock(status_code=404, text="nope")
-        ok, err = post_webhook("https://discord/x")
+        ok, _ = post_webhook("https://discord/x")
         self.assertFalse(ok)
 
     def test_no_webhook_is_error(self):
-        ok, err = post_webhook("")
+        ok, _ = post_webhook("")
         self.assertFalse(ok)
 
 
@@ -36,7 +36,9 @@ class TestFleetPing(FleetToolTestCase):
 
         self.client = Client()
         self.client.force_login(self.user)
-        self.fc = FleetCommander.objects.create(user=self.user, character=self.user_character.character)
+        self.fc = FleetCommander.objects.create(
+            user=self.user, character=self.user_character.character
+        )
         self.fleet = ActiveFleet.objects.create(
             fc=self.fc, fleet_id=42, name="Op Test", srp_link_code="ABC123"
         )
@@ -55,12 +57,12 @@ class TestFleetPing(FleetToolTestCase):
         self.assertTrue(response.json()["ok"])
         mock_post.assert_called_once()
         args, kwargs = mock_post.call_args
-        self.assertEqual(args[0], self.wh.url)                   # webhook target
-        self.assertIn("@here", kwargs["content"])               # mention from FleetType
+        self.assertEqual(args[0], self.wh.url)  # webhook target
+        self.assertIn("@here", kwargs["content"])  # mention from FleetType
         fields = kwargs["embed"]["fields"]
         values = " ".join(f["value"] for f in fields)
-        self.assertIn("ABC123", values)                          # stored SRP link
-        self.assertIn("Undock now", values)                      # note
+        self.assertIn("ABC123", values)  # stored SRP link
+        self.assertIn("Undock now", values)  # note
         # Doctrine is always "Read MOTD"; the Members field is gone.
         doctrine = next(f for f in fields if f["name"] == "Doctrine")
         self.assertEqual(doctrine["value"], "Read MOTD")
@@ -71,7 +73,9 @@ class TestFleetPing(FleetToolTestCase):
         from aa_fleet_tool.models import Webhook
 
         mock_post.return_value = (True, "")
-        self.ft.webhooks.add(Webhook.objects.create(name="Second", url="https://discord/y"))
+        self.ft.webhooks.add(
+            Webhook.objects.create(name="Second", url="https://discord/y")
+        )
         self.client.post(
             reverse("aa_fleet_tool:send_fleet_ping", args=[self.fleet.pk]),
             data={"fleet_type_pk": self.ft.pk},

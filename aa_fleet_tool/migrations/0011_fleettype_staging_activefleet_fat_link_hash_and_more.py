@@ -6,45 +6,82 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('aa_fleet_tool', '0010_fleetsnapshot'),
+        ("aa_fleet_tool", "0010_fleetsnapshot"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='FleetType',
+            name="FleetType",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('webhook_url', models.URLField(blank=True, default='', help_text='Discord webhook URL the Fleet Ping posts to for this fleet type.', max_length=500)),
-                ('role_mention', models.CharField(blank=True, default='', help_text='Optional role to ping, e.g. <@&123456789> or @here.', max_length=100)),
-                ('is_enabled', models.BooleanField(default=True)),
-                ('order', models.PositiveSmallIntegerField(default=100)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
+                (
+                    "webhook_url",
+                    models.URLField(
+                        blank=True,
+                        default="",
+                        help_text="Discord webhook URL the Fleet Ping posts to for this fleet type.",
+                        max_length=500,
+                    ),
+                ),
+                (
+                    "role_mention",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        help_text="Optional role to ping, e.g. <@&123456789> or @here.",
+                        max_length=100,
+                    ),
+                ),
+                ("is_enabled", models.BooleanField(default=True)),
+                ("order", models.PositiveSmallIntegerField(default=100)),
             ],
             options={
-                'ordering': ['order', 'name'],
+                "ordering": ["order", "name"],
             },
         ),
         migrations.CreateModel(
-            name='Staging',
+            name="Staging",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('system', models.CharField(help_text='Solar system name, e.g. Jita.', max_length=100)),
-                ('is_enabled', models.BooleanField(default=True)),
-                ('order', models.PositiveSmallIntegerField(default=100)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "system",
+                    models.CharField(
+                        help_text="Solar system name, e.g. Jita.", max_length=100
+                    ),
+                ),
+                ("is_enabled", models.BooleanField(default=True)),
+                ("order", models.PositiveSmallIntegerField(default=100)),
             ],
             options={
-                'ordering': ['order', 'name'],
+                "ordering": ["order", "name"],
             },
         ),
         migrations.AddField(
-            model_name='activefleet',
-            name='fat_link_hash',
-            field=models.CharField(blank=True, default='', max_length=64),
+            model_name="activefleet",
+            name="fat_link_hash",
+            field=models.CharField(blank=True, default="", max_length=64),
         ),
         migrations.AddField(
-            model_name='activefleet',
-            name='srp_link_code',
-            field=models.CharField(blank=True, default='', max_length=64),
+            model_name="activefleet",
+            name="srp_link_code",
+            field=models.CharField(blank=True, default="", max_length=64),
         ),
     ]

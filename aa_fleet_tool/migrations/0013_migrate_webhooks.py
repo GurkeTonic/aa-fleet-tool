@@ -20,7 +20,7 @@ def forwards(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('aa_fleet_tool', '0012_webhook_fleettype_mention_and_more'),
+        ("aa_fleet_tool", "0012_webhook_fleettype_mention_and_more"),
     ]
 
     operations = [

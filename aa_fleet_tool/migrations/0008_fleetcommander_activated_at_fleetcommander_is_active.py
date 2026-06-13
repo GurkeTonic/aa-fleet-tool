@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('aa_fleet_tool', '0007_fleetmember_station_id'),
+        ("aa_fleet_tool", "0007_fleetmember_station_id"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='fleetcommander',
-            name='activated_at',
+            model_name="fleetcommander",
+            name="activated_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='fleetcommander',
-            name='is_active',
+            model_name="fleetcommander",
+            name="is_active",
             field=models.BooleanField(default=False),
         ),
     ]

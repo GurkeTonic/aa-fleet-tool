@@ -13,7 +13,9 @@ logger = get_extension_logger(__name__)
 TIMEOUT = 10
 
 
-def post_webhook(webhook_url: str, content: str = "", embed: dict | None = None) -> tuple[bool, str]:
+def post_webhook(
+    webhook_url: str, content: str = "", embed: dict | None = None
+) -> tuple[bool, str]:
     """Post a message (optional embed) to a Discord webhook.
 
     ``allowed_mentions`` is set so role/@here mentions in ``content`` actually
@@ -38,5 +40,7 @@ def post_webhook(webhook_url: str, content: str = "", embed: dict | None = None)
 
     if resp.status_code in (200, 204):
         return True, ""
-    logger.warning("Fleet ping webhook returned %s: %s", resp.status_code, resp.text[:200])
+    logger.warning(
+        "Fleet ping webhook returned %s: %s", resp.status_code, resp.text[:200]
+    )
     return False, f"Discord returned {resp.status_code}."

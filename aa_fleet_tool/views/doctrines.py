@@ -28,11 +28,10 @@ def ship_search(request):
     if len(q) < 2:
         return JsonResponse({"results": []})
     from eve_sde.models import ItemType
-    ships = (
-        ItemType.objects
-        .filter(name__icontains=q, group__category__pk=6, published=True)
-        .order_by("name")[:12]
-    )
+
+    ships = ItemType.objects.filter(
+        name__icontains=q, group__category__pk=6, published=True
+    ).order_by("name")[:12]
     return JsonResponse({"results": [{"type_id": s.pk, "name": s.name} for s in ships]})
 
 
@@ -43,7 +42,11 @@ def create_doctrine(request):
     name = request.POST.get("name", "").strip()
     if not name:
         return JsonResponse({"ok": False, "error": _("Name required")}, status=400)
-    doc = Doctrine.objects.create(name=name, description=request.POST.get("description", ""), created_by=request.user)
+    doc = Doctrine.objects.create(
+        name=name,
+        description=request.POST.get("description", ""),
+        created_by=request.user,
+    )
     return JsonResponse({"ok": True, "pk": doc.pk, "name": doc.name})
 
 
@@ -67,13 +70,18 @@ def add_doctrine_ship(request, pk):
     ship_name = request.POST.get("ship_name", "").strip()
     role_hint = request.POST.get("role_hint", "any")
     if not ship_type_id or not ship_name:
-        return JsonResponse({"ok": False, "error": _("Ship Type ID and Ship Name are required.")}, status=400)
+        return JsonResponse(
+            {"ok": False, "error": _("Ship Type ID and Ship Name are required.")},
+            status=400,
+        )
     ship, created = DoctrineShip.objects.get_or_create(
         doctrine=doctrine,
         ship_type_id=ship_type_id,
         defaults={"ship_name": ship_name, "role_hint": role_hint},
     )
-    return JsonResponse({"ok": True, "pk": ship.pk, "ship_name": ship.ship_name, "created": created})
+    return JsonResponse(
+        {"ok": True, "pk": ship.pk, "ship_name": ship.ship_name, "created": created}
+    )
 
 
 @login_required

@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
+
 from esi.decorators import token_required
 
 from ..constants import FLEET_SCOPES
@@ -37,15 +38,15 @@ def add_fc(request, token):
         return redirect("aa_fleet_tool:commanders")
 
     # AA convention: a user may only register their own characters.
-    if not CharacterOwnership.objects.filter(user=request.user, character=char).exists():
-        messages.error(
-            request, _("That character is not registered to your account.")
-        )
+    if not CharacterOwnership.objects.filter(
+        user=request.user, character=char
+    ).exists():
+        messages.error(request, _("That character is not registered to your account."))
         return redirect("aa_fleet_tool:commanders")
 
-    fc, created = FleetCommander.objects.get_or_create(
+    created = FleetCommander.objects.get_or_create(
         character=char, defaults={"user": request.user}
-    )
+    )[1]
     if created:
         # No automatic polling on registration — the FC starts tracking on demand.
         messages.success(
@@ -54,9 +55,7 @@ def add_fc(request, token):
             % char.character_name,
         )
     else:
-        messages.info(
-            request, _("%s is already registered.") % char.character_name
-        )
+        messages.info(request, _("%s is already registered.") % char.character_name)
     return redirect("aa_fleet_tool:commanders")
 
 
@@ -74,7 +73,9 @@ def remove_fc(request):
 @require_POST
 def start_fleet(request):
     """Activate tracking for one of the user's own FCs and check it immediately."""
-    fc = get_object_or_404(FleetCommander, pk=request.POST.get("fc_pk"), user=request.user)
+    fc = get_object_or_404(
+        FleetCommander, pk=request.POST.get("fc_pk"), user=request.user
+    )
     fc.start()
     # force=True bypasses the ESI ETag so a fleet the FC never left is picked up
     # again immediately (otherwise a 304 would leave Active Fleets empty).
@@ -87,7 +88,9 @@ def start_fleet(request):
 @require_POST
 def stop_fleet(request):
     """Deactivate tracking for one of the user's own FCs and drop its fleet."""
-    fc = get_object_or_404(FleetCommander, pk=request.POST.get("fc_pk"), user=request.user)
+    fc = get_object_or_404(
+        FleetCommander, pk=request.POST.get("fc_pk"), user=request.user
+    )
     fc.stop()
     ActiveFleet.objects.filter(fc=fc).delete()
     return JsonResponse({"ok": True})

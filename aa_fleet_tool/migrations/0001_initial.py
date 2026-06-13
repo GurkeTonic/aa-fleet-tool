@@ -16,7 +16,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="General",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
             ],
             options={
                 "managed": False,
@@ -30,7 +35,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="FleetCommander",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 (
                     "character",
                     models.OneToOneField(
@@ -53,7 +63,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ActiveFleet",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("fleet_id", models.BigIntegerField()),
                 ("motd", models.TextField(blank=True, default="")),
                 ("is_free_move", models.BooleanField(default=False)),
@@ -73,7 +88,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="FleetWing",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("wing_id", models.BigIntegerField()),
                 ("name", models.CharField(default="", max_length=100)),
                 (
@@ -85,12 +105,20 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"ordering": ["wing_id"], "unique_together": {("fleet", "wing_id")}},
+            options={
+                "ordering": ["wing_id"],
+                "unique_together": {("fleet", "wing_id")},
+            },
         ),
         migrations.CreateModel(
             name="FleetSquad",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("squad_id", models.BigIntegerField()),
                 ("name", models.CharField(default="", max_length=100)),
                 (
@@ -102,12 +130,20 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"ordering": ["squad_id"], "unique_together": {("wing", "squad_id")}},
+            options={
+                "ordering": ["squad_id"],
+                "unique_together": {("wing", "squad_id")},
+            },
         ),
         migrations.CreateModel(
             name="FleetMember",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("character_id", models.IntegerField()),
                 ("character_name", models.CharField(default="", max_length=100)),
                 ("ship_type_id", models.IntegerField(default=0)),
@@ -137,7 +173,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="Doctrine",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("name", models.CharField(max_length=100)),
                 ("description", models.TextField(blank=True, default="")),
                 (
@@ -156,7 +197,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="DoctrineShip",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("ship_type_id", models.IntegerField()),
                 ("ship_name", models.CharField(max_length=100)),
                 ("role_hint", models.CharField(default="any", max_length=20)),

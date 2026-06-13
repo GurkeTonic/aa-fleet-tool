@@ -140,12 +140,21 @@ class TestFleetMembersJson(FleetToolTestCase):
     def setUp(self):
         from django.utils import timezone
 
-        from aa_fleet_tool.models import ActiveFleet, FleetCommander, FleetMember, FleetSnapshot
+        from aa_fleet_tool.models import (
+            ActiveFleet,
+            FleetCommander,
+            FleetMember,
+            FleetSnapshot,
+        )
 
         self.client = Client()
         self.client.force_login(self.user)
-        fc = FleetCommander.objects.create(user=self.user, character=self.user_character.character)
-        self.fleet = ActiveFleet.objects.create(fc=fc, fleet_id=42, last_updated=timezone.now())
+        fc = FleetCommander.objects.create(
+            user=self.user, character=self.user_character.character
+        )
+        self.fleet = ActiveFleet.objects.create(
+            fc=fc, fleet_id=42, last_updated=timezone.now()
+        )
         FleetMember.objects.create(fleet=self.fleet, character_id=1, ship_type_id=587)
         FleetMember.objects.create(fleet=self.fleet, character_id=2, ship_type_id=587)
         FleetSnapshot.objects.create(
@@ -228,8 +237,12 @@ class TestMotdTemplates(FleetToolTestCase):
 
         other = User.objects.create_user("other_fc2")
         MOTDTemplate.objects.create(name="PublicOne", text="x", is_public=True)
-        MOTDTemplate.objects.create(name="MinePriv", text="x", is_public=False, created_by=self.user)
-        MOTDTemplate.objects.create(name="TheirPriv", text="x", is_public=False, created_by=other)
+        MOTDTemplate.objects.create(
+            name="MinePriv", text="x", is_public=False, created_by=self.user
+        )
+        MOTDTemplate.objects.create(
+            name="TheirPriv", text="x", is_public=False, created_by=other
+        )
 
         response = self.client.get(reverse("aa_fleet_tool:motd"))
         public_names = {t.name for t in response.context["public_templates"]}

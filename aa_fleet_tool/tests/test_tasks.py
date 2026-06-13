@@ -15,22 +15,35 @@ from aa_fleet_tool.tests import FleetToolTestCase
 
 def _fleet_info(fleet_id=42):
     return SimpleNamespace(
-        fleet_id=fleet_id, fleet_boss_id=1001, role="fleet_commander",
-        squad_id=None, wing_id=None,
+        fleet_id=fleet_id,
+        fleet_boss_id=1001,
+        role="fleet_commander",
+        squad_id=None,
+        wing_id=None,
     )
 
 
 def _fleet_detail():
     return SimpleNamespace(
-        motd="Form up", is_free_move=True, is_registered=False, is_voice_enabled=False,
+        motd="Form up",
+        is_free_move=True,
+        is_registered=False,
+        is_voice_enabled=False,
     )
 
 
 def _member(character_id=1001, ship_type_id=587, system_id=30000142):
     return SimpleNamespace(
-        character_id=character_id, ship_type_id=ship_type_id, solar_system_id=system_id,
-        role="fleet_commander", role_name="", wing_id=None, squad_id=None,
-        join_time=None, takes_fleet_warp=True, station_id=None,
+        character_id=character_id,
+        ship_type_id=ship_type_id,
+        solar_system_id=system_id,
+        role="fleet_commander",
+        role_name="",
+        wing_id=None,
+        squad_id=None,
+        join_time=None,
+        takes_fleet_warp=True,
+        station_id=None,
     )
 
 
@@ -38,7 +51,9 @@ class TestCheckFcInFleet(FleetToolTestCase):
     """check_fc_in_fleet creates/clears the ActiveFleet based on ESI."""
 
     def setUp(self):
-        self.fc = FleetCommander.objects.create(user=self.user, character=self.user_character.character)
+        self.fc = FleetCommander.objects.create(
+            user=self.user, character=self.user_character.character
+        )
 
     @patch.object(tasks, "update_fleet_members")
     @patch.object(tasks, "get_token")
@@ -46,7 +61,9 @@ class TestCheckFcInFleet(FleetToolTestCase):
     def test_creates_active_fleet(self, mock_esi, mock_get_token, mock_update):
         mock_get_token.return_value = Mock()
         fleets = mock_esi.client.Fleets
-        fleets.GetCharactersCharacterIdFleet.return_value.result.return_value = _fleet_info(42)
+        fleets.GetCharactersCharacterIdFleet.return_value.result.return_value = (
+            _fleet_info(42)
+        )
         fleets.GetFleetsFleetId.return_value.result.return_value = _fleet_detail()
 
         tasks.check_fc_in_fleet(self.fc.pk)
@@ -101,13 +118,12 @@ class TestActivationGating(FleetToolTestCase):
     @patch.object(tasks, "get_token")
     @patch.object(tasks, "esi")
     def test_auto_stop_when_fleet_ends(self, mock_esi, mock_get_token):
-        from esi.exceptions import HTTPClientError
-
         mock_get_token.return_value = Mock()
         self.fc.start()
         ActiveFleet.objects.create(fc=self.fc, fleet_id=7)  # a fleet was running
-        mock_esi.client.Fleets.GetCharactersCharacterIdFleet.return_value.result.side_effect = (
-            HTTPClientError(status_code=404, headers={}, data=None)
+        fleet_op = mock_esi.client.Fleets.GetCharactersCharacterIdFleet
+        fleet_op.return_value.result.side_effect = HTTPClientError(
+            status_code=404, headers={}, data=None
         )
 
         tasks.check_fc_in_fleet(self.fc.pk)
@@ -119,8 +135,10 @@ class TestActivationGating(FleetToolTestCase):
     @patch.object(tasks, "update_fleet_members")
     @patch.object(tasks, "get_token")
     @patch.object(tasks, "esi")
-    def test_304_with_no_active_fleet_self_heals(self, mock_esi, mock_get_token, mock_update):
-        """Restarting a fleet the FC never left (ETag 304, no ActiveFleet) rebuilds it."""
+    def test_304_with_no_active_fleet_self_heals(
+        self, mock_esi, mock_get_token, mock_update
+    ):
+        """Restart with ETag 304 and no ActiveFleet rebuilds the fleet."""
         from esi.exceptions import HTTPNotModified
 
         mock_get_token.return_value = Mock()
@@ -140,12 +158,11 @@ class TestActivationGating(FleetToolTestCase):
     @patch.object(tasks, "get_token")
     @patch.object(tasks, "esi")
     def test_stays_active_within_grace(self, mock_esi, mock_get_token):
-        from esi.exceptions import HTTPClientError
-
         mock_get_token.return_value = Mock()
         self.fc.start()  # activated just now, no fleet formed yet
-        mock_esi.client.Fleets.GetCharactersCharacterIdFleet.return_value.result.side_effect = (
-            HTTPClientError(status_code=404, headers={}, data=None)
+        fleet_op = mock_esi.client.Fleets.GetCharactersCharacterIdFleet
+        fleet_op.return_value.result.side_effect = HTTPClientError(
+            status_code=404, headers={}, data=None
         )
 
         tasks.check_fc_in_fleet(self.fc.pk)
@@ -158,7 +175,9 @@ class TestUpdateFleetMembers(FleetToolTestCase):
     """update_fleet_members rebuilds the member list from ESI."""
 
     def setUp(self):
-        self.fc = FleetCommander.objects.create(user=self.user, character=self.user_character.character)
+        self.fc = FleetCommander.objects.create(
+            user=self.user, character=self.user_character.character
+        )
         self.fleet = ActiveFleet.objects.create(fc=self.fc, fleet_id=42)
 
     @patch.object(tasks, "_resolve_sde_names")
@@ -166,10 +185,13 @@ class TestUpdateFleetMembers(FleetToolTestCase):
     @patch.object(tasks, "esi")
     def test_members_synced(self, mock_esi, mock_get_token, mock_sde):
         from django.core.cache import cache
+
         cache.delete("fleet_tool_name_1001")  # force ESI resolution, not a cached name
         mock_get_token.return_value = Mock()
         fleets = mock_esi.client.Fleets
-        fleets.GetFleetsFleetIdMembers.return_value.result.return_value = [_member(1001)]
+        fleets.GetFleetsFleetIdMembers.return_value.result.return_value = [
+            _member(1001)
+        ]
         fleets.GetFleetsFleetIdWings.return_value.result.return_value = []
         # Characters via ESI, ships/systems via SDE (mocked here).
         mock_esi.client.Universe.PostUniverseNames.return_value.result.return_value = [
@@ -188,13 +210,16 @@ class TestUpdateFleetMembers(FleetToolTestCase):
 
         # A composition snapshot was captured for the graph
         from aa_fleet_tool.models import FleetSnapshot
+
         snap = FleetSnapshot.objects.filter(fleet=self.fleet).latest("timestamp")
         self.assertEqual(snap.total, 1)
 
     @patch.object(tasks, "_resolve_sde_names")
     @patch.object(tasks, "get_token")
     @patch.object(tasks, "esi")
-    def test_members_self_heal_on_304_when_empty(self, mock_esi, mock_get_token, mock_sde):
+    def test_members_self_heal_on_304_when_empty(
+        self, mock_esi, mock_get_token, mock_sde
+    ):
         """A 304 with no local members (after stop/start) forces a refetch."""
         from esi.exceptions import HTTPNotModified
 
@@ -203,7 +228,7 @@ class TestUpdateFleetMembers(FleetToolTestCase):
         fleets = mock_esi.client.Fleets
         fleets.GetFleetsFleetIdMembers.return_value.result.side_effect = [
             HTTPNotModified(status_code=304, headers={}),  # first (non-forced) call
-            [_member(1001)],                                # forced retry
+            [_member(1001)],  # forced retry
         ]
         fleets.GetFleetsFleetIdWings.return_value.result.return_value = []
         mock_esi.client.Universe.PostUniverseNames.return_value.result.return_value = [
@@ -221,7 +246,10 @@ class TestUpdateFleetMembers(FleetToolTestCase):
         from django.utils import timezone
 
         from aa_fleet_tool.models import FleetSnapshot
-        FleetSnapshot.objects.create(fleet=self.fleet, timestamp=timezone.now(), total=3)
+
+        FleetSnapshot.objects.create(
+            fleet=self.fleet, timestamp=timezone.now(), total=3
+        )
         self.assertEqual(FleetSnapshot.objects.count(), 1)
         self.fleet.delete()
         self.assertEqual(FleetSnapshot.objects.count(), 0)
@@ -232,11 +260,12 @@ class TestUpdateFleetMembers(FleetToolTestCase):
         from django.utils import timezone
 
         from aa_fleet_tool.models import FleetSnapshot
+
         # An hour-old snapshot exists; writing a new one prunes anything > 10 min.
         FleetSnapshot.objects.create(
             fleet=self.fleet, timestamp=timezone.now() - timedelta(hours=1), total=1
         )
-        tasks._write_snapshot(self.fleet)
+        tasks._write_snapshot(self.fleet)  # pylint: disable=protected-access
         timestamps = list(self.fleet.snapshots.values_list("timestamp", flat=True))
         self.assertEqual(len(timestamps), 1)  # old pruned, only the fresh one remains
         self.assertGreater(timestamps[0], timezone.now() - timedelta(minutes=10))

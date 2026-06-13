@@ -28,7 +28,11 @@ from aa_fleet_tool.providers import esi, get_token
 logger = get_extension_logger(__name__)
 
 # Exceptions worth a retry — the error/bucket limits and transient ESI 5xx.
-ESI_RETRY_EXCEPTIONS = (ESIErrorLimitException, ESIBucketLimitException, HTTPServerError)
+ESI_RETRY_EXCEPTIONS = (
+    ESIErrorLimitException,
+    ESIBucketLimitException,
+    HTTPServerError,
+)
 
 NAME_CACHE_TTL = 3600
 
@@ -42,9 +46,11 @@ def _auto_stop(fc, had_fleet: bool) -> None:
     """
     if had_fleet:
         fc.stop()
-    elif fc.activated_at and (
-        timezone.now() - fc.activated_at
-    ).total_seconds() > FLEET_TOOL_ACTIVATION_GRACE:
+    elif (
+        fc.activated_at
+        and (timezone.now() - fc.activated_at).total_seconds()
+        > FLEET_TOOL_ACTIVATION_GRACE
+    ):
         fc.stop()
 
 
@@ -58,9 +64,12 @@ def _resolve_sde_names(model_name: str, ids: set[int]) -> dict[int, str]:
         return {}
     try:
         from eve_sde import models as sde
+
         model = getattr(sde, model_name)
         return dict(model.objects.filter(id__in=ids).values_list("id", "name"))
-    except Exception as exc:  # SDE not installed/loaded → caller falls back to placeholders
+    except (
+        Exception
+    ) as exc:  # SDE not installed/loaded → caller falls back to placeholders
         logger.warning("SDE name lookup (%s) failed: %s", model_name, exc)
         return {}
 
@@ -82,7 +91,7 @@ def _resolve_character_names(ids: list[int]) -> dict[int, str]:
     if not unknown:
         return result
 
-    chunks = [unknown[i:i + 1000] for i in range(0, len(unknown), 1000)]
+    chunks = [unknown[i : i + 1000] for i in range(0, len(unknown), 1000)]
     for chunk in chunks:
         try:
             names = esi.client.Universe.PostUniverseNames(body=chunk).result()
@@ -105,7 +114,9 @@ def check_all_fc_status():
     """
     from .models import FleetCommander
 
-    for fc_pk in FleetCommander.objects.filter(is_active=True).values_list("pk", flat=True):
+    for fc_pk in FleetCommander.objects.filter(is_active=True).values_list(
+        "pk", flat=True
+    ):
         check_fc_in_fleet.delay(fc_pk)
 
 
@@ -114,7 +125,9 @@ def update_all_active_fleets():
     """Runs every 30s — updates members/wings for all known active fleets."""
     from .models import ActiveFleet
 
-    for fc_pk in ActiveFleet.objects.filter(fc__is_active=True).values_list("fc_id", flat=True):
+    for fc_pk in ActiveFleet.objects.filter(fc__is_active=True).values_list(
+        "fc_id", flat=True
+    ):
         update_fleet_members.delay(fc_pk)
 
 
@@ -263,20 +276,32 @@ def update_fleet_members(fc_pk: int, force: bool = False):
     if members_raw is not None:
         # Static IDs (ships, systems) come from the local SDE; only character
         # names — which the SDE does not hold — are resolved via ESI.
-        char_names = _resolve_character_names(list({m.character_id for m in members_raw}))
-        ship_names = _resolve_sde_names("ItemType", {m.ship_type_id for m in members_raw})
-        system_names = _resolve_sde_names("SolarSystem", {m.solar_system_id for m in members_raw})
+        char_names = _resolve_character_names(
+            list({m.character_id for m in members_raw})
+        )
+        ship_names = _resolve_sde_names(
+            "ItemType", {m.ship_type_id for m in members_raw}
+        )
+        system_names = _resolve_sde_names(
+            "SolarSystem", {m.solar_system_id for m in members_raw}
+        )
 
         fleet.members.all().delete()
         new_members = [
             FleetMember(
                 fleet=fleet,
                 character_id=m.character_id,
-                character_name=char_names.get(m.character_id, f"Unknown #{m.character_id}"),
+                character_name=char_names.get(
+                    m.character_id, f"Unknown #{m.character_id}"
+                ),
                 ship_type_id=m.ship_type_id,
-                ship_name=ship_names.get(m.ship_type_id, f"Unknown Ship #{m.ship_type_id}"),
+                ship_name=ship_names.get(
+                    m.ship_type_id, f"Unknown Ship #{m.ship_type_id}"
+                ),
                 solar_system_id=m.solar_system_id,
-                system_name=system_names.get(m.solar_system_id, f"Unknown System #{m.solar_system_id}"),
+                system_name=system_names.get(
+                    m.solar_system_id, f"Unknown System #{m.solar_system_id}"
+                ),
                 role=m.role,
                 role_name=getattr(m, "role_name", "") or "",
                 wing_id=getattr(m, "wing_id", None),

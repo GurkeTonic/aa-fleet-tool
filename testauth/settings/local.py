@@ -6,7 +6,7 @@ Test settings
 # local.py settings
 # Every setting in base.py can be overloaded by redefining it here.
 
-from .base import *
+from .base import *  # noqa: F401,F403  pylint: disable=wildcard-import,unused-wildcard-import
 
 PACKAGE = "aa_fleet_tool"
 

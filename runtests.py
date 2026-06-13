@@ -11,7 +11,7 @@ if __name__ == "__main__":
     except ImportError:
         try:
             # Django
-            import django
+            import django  # noqa: F401
         except ImportError:
             raise ImportError(
                 "Couldn't import Django. Are you sure it's installed and "

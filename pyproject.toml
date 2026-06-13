@@ -66,6 +66,7 @@ build.include = [
 version.path = "aa_fleet_tool/__init__.py"
 
 [tool.isort]
+profile = "black"
 known_allianceauth = ["allianceauth", "esi"]
 known_third_party = ["requests", "celery"]
 sections = [
@@ -86,4 +87,10 @@ max-positional-arguments = 6
 disable = [
     "C",
     "R",
+    # pylint runs without the project's dependencies in pre-commit/CI.
+    "import-error",
+    # Django view/admin/signal signatures keep required but unused params.
+    "unused-argument",
+    # Defensive catches around external ESI calls and optional integrations.
+    "broad-exception-caught",
 ]

@@ -8,13 +8,7 @@ from allianceauth.services.hooks import get_extension_logger
 from esi.exceptions import HTTPClientError, HTTPNotModified, HTTPServerError
 
 from ..constants import WRITE_SCOPE
-from ..models import (
-    ActiveFleet,
-    Doctrine,
-    FleetCommander,
-    FleetLayout,
-    MOTDTemplate,
-)
+from ..models import ActiveFleet, Doctrine, FleetCommander, FleetLayout, MOTDTemplate
 from ..providers import get_token
 
 logger = get_extension_logger(__name__)
@@ -77,10 +71,13 @@ def resolve_doctrine(doctrine_pk):
             return None, None
         try:
             from fittings.models import Doctrine as FittingsDoctrine
+
             pk = int(str(doctrine_pk).split("-", 1)[1])
-            doc = FittingsDoctrine.objects.prefetch_related("fittings__ship_type").get(pk=pk)
+            doc = FittingsDoctrine.objects.prefetch_related("fittings__ship_type").get(
+                pk=pk
+            )
             ship_ids = {f.ship_type_type_id for f in doc.fittings.all()}
-            # Fittings has no role_hint → all ships map to "any" (will go to "other" bucket)
+            # Fittings has no role_hint → all ships map to "any" (→ "other")
             ship_role_map = {sid: "any" for sid in ship_ids}
             return ship_ids, ship_role_map
         except Exception as exc:

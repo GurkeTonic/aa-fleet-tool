@@ -7,25 +7,40 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('aa_fleet_tool', '0009_motdtemplate_is_public'),
+        ("aa_fleet_tool", "0009_motdtemplate_is_public"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='FleetSnapshot',
+            name="FleetSnapshot",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('timestamp', models.DateTimeField()),
-                ('total', models.PositiveIntegerField(default=0)),
-                ('dps', models.PositiveIntegerField(default=0)),
-                ('logi', models.PositiveIntegerField(default=0)),
-                ('booster', models.PositiveIntegerField(default=0)),
-                ('ewar', models.PositiveIntegerField(default=0)),
-                ('other', models.PositiveIntegerField(default=0)),
-                ('fleet', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='snapshots', to='aa_fleet_tool.activefleet')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("timestamp", models.DateTimeField()),
+                ("total", models.PositiveIntegerField(default=0)),
+                ("dps", models.PositiveIntegerField(default=0)),
+                ("logi", models.PositiveIntegerField(default=0)),
+                ("booster", models.PositiveIntegerField(default=0)),
+                ("ewar", models.PositiveIntegerField(default=0)),
+                ("other", models.PositiveIntegerField(default=0)),
+                (
+                    "fleet",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="snapshots",
+                        to="aa_fleet_tool.activefleet",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['timestamp'],
+                "ordering": ["timestamp"],
             },
         ),
     ]

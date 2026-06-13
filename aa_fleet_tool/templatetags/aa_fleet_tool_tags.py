@@ -4,7 +4,7 @@
 from django.template.defaulttags import register
 
 # AA Fleet Tool
-from aa_fleet_tool import __title__, __version__
+from aa_fleet_tool import __version__
 
 
 @register.simple_tag

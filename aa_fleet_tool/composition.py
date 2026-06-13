@@ -19,6 +19,7 @@ def ship_roles(ship_type_ids) -> dict[int, str]:
         return {}
     try:
         from eve_sde.models import ItemType
+
         groups = dict(ItemType.objects.filter(id__in=ids).values_list("id", "group_id"))
     except Exception as exc:  # SDE missing/not loaded → everything falls back to 'dps'
         logger.warning("Composition SDE lookup failed: %s", exc)

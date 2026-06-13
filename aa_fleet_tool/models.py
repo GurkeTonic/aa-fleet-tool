@@ -19,7 +19,9 @@ class General(models.Model):
 
 
 class FleetCommander(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="fleet_commanders")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="fleet_commanders"
+    )
     character = models.OneToOneField(
         EveCharacter, on_delete=models.CASCADE, related_name="fleet_commander"
     )
@@ -36,6 +38,7 @@ class FleetCommander(models.Model):
 
     def start(self):
         from django.utils import timezone
+
         self.is_active = True
         self.activated_at = timezone.now()
         self.save(update_fields=["is_active", "activated_at"])
@@ -47,7 +50,9 @@ class FleetCommander(models.Model):
 
 
 class ActiveFleet(models.Model):
-    fc = models.OneToOneField(FleetCommander, on_delete=models.CASCADE, related_name="active_fleet")
+    fc = models.OneToOneField(
+        FleetCommander, on_delete=models.CASCADE, related_name="active_fleet"
+    )
     fleet_id = models.BigIntegerField()
     name = models.CharField(max_length=100, blank=True, default="")
     motd = models.TextField(blank=True, default="")
@@ -74,7 +79,9 @@ class FleetSnapshot(models.Model):
     when the fleet ends.
     """
 
-    fleet = models.ForeignKey(ActiveFleet, on_delete=models.CASCADE, related_name="snapshots")
+    fleet = models.ForeignKey(
+        ActiveFleet, on_delete=models.CASCADE, related_name="snapshots"
+    )
     timestamp = models.DateTimeField()
     total = models.PositiveIntegerField(default=0)
     dps = models.PositiveIntegerField(default=0)
@@ -91,7 +98,9 @@ class FleetSnapshot(models.Model):
 
 
 class FleetWing(models.Model):
-    fleet = models.ForeignKey(ActiveFleet, on_delete=models.CASCADE, related_name="wings")
+    fleet = models.ForeignKey(
+        ActiveFleet, on_delete=models.CASCADE, related_name="wings"
+    )
     wing_id = models.BigIntegerField()
     name = models.CharField(max_length=100, default="")
 
@@ -132,7 +141,9 @@ ROLE_BADGE = {
 
 
 class FleetMember(models.Model):
-    fleet = models.ForeignKey(ActiveFleet, on_delete=models.CASCADE, related_name="members")
+    fleet = models.ForeignKey(
+        ActiveFleet, on_delete=models.CASCADE, related_name="members"
+    )
     character_id = models.IntegerField()
     character_name = models.CharField(max_length=100, default="")
     ship_type_id = models.IntegerField(default=0)
@@ -189,10 +200,14 @@ class DoctrineShip(models.Model):
         ("scout", "Scout"),
     ]
 
-    doctrine = models.ForeignKey(Doctrine, on_delete=models.CASCADE, related_name="ships")
+    doctrine = models.ForeignKey(
+        Doctrine, on_delete=models.CASCADE, related_name="ships"
+    )
     ship_type_id = models.IntegerField()
     ship_name = models.CharField(max_length=100)
-    role_hint = models.CharField(max_length=20, choices=ROLE_HINT_CHOICES, default="any")
+    role_hint = models.CharField(
+        max_length=20, choices=ROLE_HINT_CHOICES, default="any"
+    )
 
     class Meta:
         unique_together = ("doctrine", "ship_type_id")
@@ -210,7 +225,11 @@ class MOTDTemplate(models.Model):
     # creator.
     is_public = models.BooleanField(default=True)
     created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="motd_templates"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="motd_templates",
     )
 
     class Meta:
@@ -224,7 +243,11 @@ class FleetLayout(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
     created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="fleet_layouts"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fleet_layouts",
     )
 
     class Meta:
@@ -235,7 +258,9 @@ class FleetLayout(models.Model):
 
 
 class FleetLayoutWing(models.Model):
-    layout = models.ForeignKey(FleetLayout, on_delete=models.CASCADE, related_name="wings")
+    layout = models.ForeignKey(
+        FleetLayout, on_delete=models.CASCADE, related_name="wings"
+    )
     position = models.PositiveSmallIntegerField()
     name = models.CharField(max_length=100)
 
@@ -248,7 +273,9 @@ class FleetLayoutWing(models.Model):
 
 
 class FleetLayoutSquad(models.Model):
-    wing = models.ForeignKey(FleetLayoutWing, on_delete=models.CASCADE, related_name="squads")
+    wing = models.ForeignKey(
+        FleetLayoutWing, on_delete=models.CASCADE, related_name="squads"
+    )
     position = models.PositiveSmallIntegerField()
     name = models.CharField(max_length=100)
 
@@ -271,7 +298,10 @@ class FleetToolConfiguration(models.Model):
     )
     use_fittings_doctrines = models.BooleanField(
         default=False,
-        help_text="Include doctrines from the fittings module in the doctrine dropdown (requires fittings).",
+        help_text=(
+            "Include doctrines from the fittings module in the doctrine "
+            "dropdown (requires fittings)."
+        ),
     )
 
     class Meta:
@@ -316,11 +346,16 @@ class FleetType(models.Model):
 
     name = models.CharField(max_length=100, unique=True)
     webhooks = models.ManyToManyField(
-        Webhook, blank=True, related_name="fleet_types",
+        Webhook,
+        blank=True,
+        related_name="fleet_types",
         help_text="Discord webhooks the Fleet Ping posts to for this fleet type.",
     )
     mention = models.CharField(
-        max_length=10, choices=MENTION_CHOICES, blank=True, default="",
+        max_length=10,
+        choices=MENTION_CHOICES,
+        blank=True,
+        default="",
         help_text="What to mention in the ping. None = no mention.",
     )
     is_enabled = models.BooleanField(default=True)

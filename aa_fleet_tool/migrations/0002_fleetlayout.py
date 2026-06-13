@@ -14,7 +14,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="FleetLayout",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("name", models.CharField(max_length=100)),
                 ("description", models.TextField(blank=True, default="")),
                 (
@@ -33,7 +38,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="FleetLayoutWing",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("position", models.PositiveSmallIntegerField()),
                 ("name", models.CharField(max_length=100)),
                 (
@@ -45,12 +55,20 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"ordering": ["position"], "unique_together": {("layout", "position")}},
+            options={
+                "ordering": ["position"],
+                "unique_together": {("layout", "position")},
+            },
         ),
         migrations.CreateModel(
             name="FleetLayoutSquad",
             fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False
+                    ),
+                ),
                 ("position", models.PositiveSmallIntegerField()),
                 ("name", models.CharField(max_length=100)),
                 (
@@ -62,6 +80,9 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"ordering": ["position"], "unique_together": {("wing", "position")}},
+            options={
+                "ordering": ["position"],
+                "unique_together": {("wing", "position")},
+            },
         ),
     ]

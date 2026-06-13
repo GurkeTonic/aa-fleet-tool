@@ -1,7 +1,18 @@
 from django.apps import apps
 from django.contrib import admin
 
-from .models import ActiveFleet, Doctrine, DoctrineShip, FleetCommander, FleetMember, FleetWing, FleetSquad, FleetToolConfiguration, FleetType, MOTDTemplate, Staging, Webhook
+from .models import (
+    ActiveFleet,
+    Doctrine,
+    DoctrineShip,
+    FleetCommander,
+    FleetMember,
+    FleetToolConfiguration,
+    FleetType,
+    MOTDTemplate,
+    Staging,
+    Webhook,
+)
 
 
 @admin.register(MOTDTemplate)
@@ -44,7 +55,13 @@ class FleetCommanderAdmin(admin.ModelAdmin):
 class FleetMemberInline(admin.TabularInline):
     model = FleetMember
     extra = 0
-    readonly_fields = ("character_name", "ship_name", "system_name", "role", "join_time")
+    readonly_fields = (
+        "character_name",
+        "ship_name",
+        "system_name",
+        "role",
+        "join_time",
+    )
 
 
 @admin.register(ActiveFleet)
