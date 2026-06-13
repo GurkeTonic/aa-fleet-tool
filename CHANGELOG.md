@@ -5,6 +5,17 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-13
+
+### Changed
+
+- Near-live tracking: the member list and graphs now update every 5 seconds
+  (was 30); the graph window is 5 minutes (was 10).
+
+### Fixed
+
+- The sync interval settings are now actually applied to the schedule.
+
 ## [0.3.0] - 2026-06-13
 
 ### Added

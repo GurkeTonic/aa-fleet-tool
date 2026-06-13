@@ -155,10 +155,10 @@ Optional overrides for `myauth/settings/local.py` (defaults shown):
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `FLEET_TOOL_APP_NAME` | `"Fleet Tool"` | Menu name |
-| `FLEET_TOOL_MEMBER_SYNC_INTERVAL` | `30` | Member sync interval (seconds) |
+| `FLEET_TOOL_MEMBER_SYNC_INTERVAL` | `5` | Member sync interval (seconds); ESI caches members for 5 s, limit is per FC |
 | `FLEET_TOOL_FC_CHECK_INTERVAL` | `60` | FC fleet-status check interval (seconds) |
 | `FLEET_TOOL_ACTIVATION_GRACE` | `600` | Auto-stop a started FC who never forms a fleet (seconds) |
-| `FLEET_TOOL_SNAPSHOT_WINDOW` | `600` | Rolling window of composition snapshots for the graph (seconds) |
+| `FLEET_TOOL_SNAPSHOT_WINDOW` | `300` | Rolling window of composition snapshots for the graph (seconds) |
 
 ## Optional integrations<a name="optional-integrations"></a>
 

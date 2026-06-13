@@ -309,3 +309,12 @@ class TestUpdateFleetMembers(FleetToolTestCase):
         snap = FleetSnapshot.objects.latest("timestamp")
         self.assertEqual(snap.total, 4)
         self.assertEqual(snap.in_system_total, 2)  # boss + same-system undocked
+
+    def test_snapshot_dedups_rapid_writes(self):
+        from aa_fleet_tool.models import FleetSnapshot
+
+        # Two writes in quick succession (e.g. member sync + FC status check)
+        # must produce only one snapshot.
+        tasks._write_snapshot(self.fleet)  # pylint: disable=protected-access
+        tasks._write_snapshot(self.fleet)  # pylint: disable=protected-access
+        self.assertEqual(FleetSnapshot.objects.filter(fleet=self.fleet).count(), 1)

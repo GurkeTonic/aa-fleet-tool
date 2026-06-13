@@ -122,7 +122,7 @@ def check_all_fc_status():
 
 @shared_task(base=QueueOnce, once={"graceful": True})
 def update_all_active_fleets():
-    """Runs every 30s — updates members/wings for all known active fleets."""
+    """Periodic fan-out — updates members/wings for all known active fleets."""
     from .models import ActiveFleet
 
     for fc_pk in ActiveFleet.objects.filter(fc__is_active=True).values_list(
@@ -348,20 +348,26 @@ def update_fleet_members(fc_pk: int, force: bool = False):
 def _write_snapshot(fleet) -> None:
     """Capture the current composition for the live graph.
 
-    Throttled to ≥20 s apart, and a rolling window: snapshots older than
-    ``FLEET_TOOL_SNAPSHOT_WINDOW`` (default 10 min) are pruned so the graph stays
+    One snapshot per member sync, plus a rolling window: snapshots older than
+    ``FLEET_TOOL_SNAPSHOT_WINDOW`` (default 5 min) are pruned so the graph stays
     a short live window and the table doesn't grow unbounded.
     """
     from datetime import timedelta
 
-    from .app_settings import FLEET_TOOL_SNAPSHOT_WINDOW
+    from .app_settings import (
+        FLEET_TOOL_MEMBER_SYNC_INTERVAL,
+        FLEET_TOOL_SNAPSHOT_WINDOW,
+    )
     from .composition import composition_counts, in_system_ship_ids
     from .models import FleetSnapshot
 
     now = timezone.now()
+    # Dedup snapshots that land closer than half a sync interval apart (e.g. when
+    # the FC status check triggers an extra update right after a member sync).
+    min_gap = max(2, FLEET_TOOL_MEMBER_SYNC_INTERVAL // 2)
     last = fleet.snapshots.order_by("-timestamp").first()
-    if last and (now - last.timestamp).total_seconds() < 20:
-        return  # avoid double snapshots when check_fc_in_fleet re-triggers an update
+    if last and (now - last.timestamp).total_seconds() < min_gap:
+        return
 
     members = list(fleet.members.all())
     ship_ids = [m.ship_type_id for m in members]

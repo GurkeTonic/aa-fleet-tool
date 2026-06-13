@@ -18,7 +18,7 @@ msgstr ""
 
 #: templates/aa_fleet_tool/base.html:8 templates/aa_fleet_tool/base.html:10
 msgid "Fleet Tool"
-msgstr "Flottentyp"
+msgstr "Flotten Tool"
 
 #: templates/aa_fleet_tool/base.html:15
 msgid "Active Fleets"
@@ -267,7 +267,7 @@ msgstr "AUS"
 #: templates/aa_fleet_tool/fleets.html:71
 #: templates/aa_fleet_tool/partials/_fleet_modals.html:291
 msgid "Fleet Ping"
-msgstr "Flottengröße"
+msgstr "Fleet Ping"
 
 #: templates/aa_fleet_tool/fleets.html:76
 #: templates/aa_fleet_tool/partials/_fleet_modals.html:147
