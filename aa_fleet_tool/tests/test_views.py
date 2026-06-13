@@ -1,6 +1,7 @@
 """Tests for Fleet Tool views."""
 
 # Standard Library
+import importlib
 from http import HTTPStatus
 from unittest.mock import patch
 
@@ -10,6 +11,11 @@ from django.urls import reverse
 
 # AA Fleet Tool
 from aa_fleet_tool.tests import FleetToolTestCase
+
+# The views package re-exports a view function named ``commanders`` (used as the
+# URL callable), which shadows the submodule of the same name. Resolve the real
+# module from sys.modules so patching its ``check_fc_in_fleet`` is unambiguous.
+commanders_views = importlib.import_module("aa_fleet_tool.views.commanders")
 
 
 class TestIndexView(FleetToolTestCase):
@@ -97,7 +103,7 @@ class TestFleetStartStop(FleetToolTestCase):
             user=self.user, character=self.user_character.character
         )
 
-    @patch("aa_fleet_tool.views.commanders.check_fc_in_fleet")
+    @patch.object(commanders_views, "check_fc_in_fleet")
     def test_start_fleet_activates(self, mock_task):
         response = self.client.post(
             reverse("aa_fleet_tool:start_fleet"), data={"fc_pk": self.fc.pk}

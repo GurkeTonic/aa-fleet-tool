@@ -5,6 +5,15 @@ All notable changes to this project are documented here
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-06-13
+
+### Fixed
+
+- Flaky test `test_start_fleet_activates`: the views package re-exports a
+  function named `commanders` that shadows the submodule of the same name, so
+  the string patch target resolved to the function on some runs. Patch the
+  real module (resolved via `importlib`) instead.
+
 ## [0.2.2] - 2026-06-13
 
 ### Fixed
