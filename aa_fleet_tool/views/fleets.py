@@ -2,7 +2,7 @@
 
 from django.apps import apps
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
@@ -31,11 +31,12 @@ logger = get_extension_logger(__name__)
 @permission_required("aa_fleet_tool.view_fleet_tool")
 def index(request):
     """Active Fleets — fleet list, live member detail and composition."""
-    active_fleets = (
-        ActiveFleet.objects.select_related("fc__character", "fc__user")
-        .prefetch_related("members", "wings__squads")
-        .all()
-    )
+    # The list only needs a member count per fleet; member/wing rows are fetched
+    # (ordered) just for the one selected fleet further down, so don't prefetch
+    # them for every active fleet here.
+    active_fleets = ActiveFleet.objects.select_related(
+        "fc__character", "fc__user"
+    ).annotate(member_count=Count("members"))
 
     selected_fleet = None
     selected_fleet_members = []
@@ -178,16 +179,14 @@ def index(request):
         except Exception as exc:
             logger.warning("FAT link lookup failed: %s", exc)
 
-    fleet_summary = []
-    for af in active_fleets:
-        total = af.members.count()
-        fleet_summary.append(
-            {
-                "fleet": af,
-                "member_count": total,
-                "is_my_fc": af.fc.user == request.user,
-            }
-        )
+    fleet_summary = [
+        {
+            "fleet": af,
+            "member_count": af.member_count,
+            "is_my_fc": af.fc.user == request.user,
+        }
+        for af in active_fleets
+    ]
 
     # Numeric pk for fittings doctrine (template can't add str + int)
     selected_fittings_doctrine_pk = None
