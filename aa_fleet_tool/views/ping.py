@@ -10,8 +10,8 @@ from django.views.decorators.http import require_POST
 
 from allianceauth.services.hooks import get_extension_logger
 
-from ..discord import post_webhook
 from ..models import ActiveFleet, FleetType, Staging
+from ..tasks import post_fleet_ping
 
 logger = get_extension_logger(__name__)
 
@@ -106,13 +106,7 @@ def send_fleet_ping(request, fleet_pk):
     mention = {"here": "@here", "everyone": "@everyone"}.get(fleet_type.mention, "")
     content = f"{mention} {headline}".strip()
 
-    # Post to every linked webhook; succeed if at least one goes through.
-    any_ok, last_err = False, ""
-    for wh in webhooks:
-        ok, err = post_webhook(wh.url, content=content, embed=embed)
-        any_ok = any_ok or ok
-        if not ok:
-            last_err = err
-    if any_ok:
-        return JsonResponse({"ok": True})
-    return JsonResponse({"ok": False, "error": last_err}, status=502)
+    # Posting is slow network I/O (and there may be several webhooks), so hand it
+    # to a task and return immediately rather than blocking the request thread.
+    post_fleet_ping.delay([wh.url for wh in webhooks], content, embed)
+    return JsonResponse({"ok": True})

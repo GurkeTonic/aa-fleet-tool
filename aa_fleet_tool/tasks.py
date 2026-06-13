@@ -271,6 +271,8 @@ def update_fleet_members(fc_pk: int, force: bool = False):
             # Fleet vanished — remove it and deactivate the FC.
             fleet.delete()
             _auto_stop(fc, had_fleet=True)
+        else:
+            logger.warning("Member fetch failed for %s: %s", fc, exc)
         return
 
     if members_raw is not None:
@@ -321,7 +323,8 @@ def update_fleet_members(fc_pk: int, force: bool = False):
         ).result(force_refresh=force)
     except HTTPNotModified:
         wings_raw = None
-    except HTTPClientError:
+    except HTTPClientError as exc:
+        logger.warning("Wing fetch failed for %s: %s", fc, exc)
         wings_raw = None
 
     if wings_raw is not None:
@@ -397,5 +400,24 @@ def _write_snapshot(fleet) -> None:
 
 @shared_task
 def sync_fc(fc_pk: int):
-    """Manual trigger: full (cache-bypassing) refresh for one FC."""
-    check_fc_in_fleet(fc_pk, force=True)
+    """Manual trigger: full (cache-bypassing) refresh for one FC.
+
+    Dispatched via ``.delay`` so the manual sync shares ``check_fc_in_fleet``'s
+    QueueOnce lock with the periodic run instead of bypassing it.
+    """
+    check_fc_in_fleet.delay(fc_pk, force=True)
+
+
+@shared_task
+def post_fleet_ping(webhook_urls: list[str], content: str, embed: dict) -> None:
+    """Post a Fleet Ping to each Discord webhook off the request thread.
+
+    Webhook POSTs are slow network I/O (and there may be several), so the view
+    dispatches this task and returns immediately instead of blocking.
+    """
+    from .discord import post_webhook
+
+    for url in webhook_urls:
+        ok, err = post_webhook(url, content=content, embed=embed)
+        if not ok:
+            logger.warning("Fleet ping webhook failed: %s", err)

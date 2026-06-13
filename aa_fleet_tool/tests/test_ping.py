@@ -29,6 +29,19 @@ class TestDiscordWebhook(TestCase):
         ok, _ = post_webhook("")
         self.assertFalse(ok)
 
+    @patch("aa_fleet_tool.discord.time.sleep")
+    @patch("aa_fleet_tool.discord.requests.post")
+    def test_429_is_retried(self, mock_post, mock_sleep):
+        # First a rate limit (429 + Retry-After), then success.
+        mock_post.side_effect = [
+            Mock(status_code=429, headers={"Retry-After": "0.5"}, text="limited"),
+            Mock(status_code=204),
+        ]
+        ok, _ = post_webhook("https://discord/x")
+        self.assertTrue(ok)
+        self.assertEqual(mock_post.call_count, 2)
+        mock_sleep.assert_called_once()
+
 
 class TestFleetPing(FleetToolTestCase):
     def setUp(self):
@@ -46,20 +59,20 @@ class TestFleetPing(FleetToolTestCase):
         self.ft = FleetType.objects.create(name="CTA", mention="here")
         self.ft.webhooks.add(self.wh)
 
-    @patch("aa_fleet_tool.views.ping.post_webhook")
-    def test_send_ping_builds_message(self, mock_post):
-        mock_post.return_value = (True, "")
+    @patch("aa_fleet_tool.views.ping.post_fleet_ping")
+    def test_send_ping_builds_message(self, mock_task):
         response = self.client.post(
             reverse("aa_fleet_tool:send_fleet_ping", args=[self.fleet.pk]),
             data={"fleet_type_pk": self.ft.pk, "note": "Undock now"},
         )
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertTrue(response.json()["ok"])
-        mock_post.assert_called_once()
-        args, kwargs = mock_post.call_args
-        self.assertEqual(args[0], self.wh.url)  # webhook target
-        self.assertIn("@here", kwargs["content"])  # mention from FleetType
-        fields = kwargs["embed"]["fields"]
+        # The view dispatches a task with (webhook_urls, content, embed).
+        mock_task.delay.assert_called_once()
+        urls, content, embed = mock_task.delay.call_args.args
+        self.assertEqual(urls, [self.wh.url])  # webhook target
+        self.assertIn("@here", content)  # mention from FleetType
+        fields = embed["fields"]
         values = " ".join(f["value"] for f in fields)
         self.assertIn("ABC123", values)  # stored SRP link
         self.assertIn("Undock now", values)  # note
@@ -68,11 +81,10 @@ class TestFleetPing(FleetToolTestCase):
         self.assertEqual(doctrine["value"], "Read MOTD")
         self.assertFalse(any(f["name"] == "Members" for f in fields))
 
-    @patch("aa_fleet_tool.views.ping.post_webhook")
-    def test_posts_to_all_linked_webhooks(self, mock_post):
+    @patch("aa_fleet_tool.views.ping.post_fleet_ping")
+    def test_posts_to_all_linked_webhooks(self, mock_task):
         from aa_fleet_tool.models import Webhook
 
-        mock_post.return_value = (True, "")
         self.ft.webhooks.add(
             Webhook.objects.create(name="Second", url="https://discord/y")
         )
@@ -80,7 +92,8 @@ class TestFleetPing(FleetToolTestCase):
             reverse("aa_fleet_tool:send_fleet_ping", args=[self.fleet.pk]),
             data={"fleet_type_pk": self.ft.pk},
         )
-        self.assertEqual(mock_post.call_count, 2)
+        urls = mock_task.delay.call_args.args[0]
+        self.assertEqual(len(urls), 2)
 
     def test_missing_fleet_type_is_400(self):
         response = self.client.post(
